@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Freilifts</title>
+<link rel="manifest" href="manifest.json">
+<style>
+body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+h1 { text-align: center; }
+.section { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+label { display: block; margin-top: 10px; }
+input, select, button { width: 100%; padding: 8px; margin-top: 5px; border-radius: 6px; border: 1px solid #ccc; }
+button { background: #1976d2; color: white; border: none; cursor: pointer; }
+button:hover { background: #1259a6; }
+canvas { max-width: 100%; }
+.workout-entry { display: flex; justify-content: space-between; align-items: center; }
+.workout-entry div { flex: 1; margin-right: 5px; }
+.workout-entry button { flex: 0 0 auto; margin-left: 5px; }
+</style>
+</head>
+<body>
+<h1>Freilifts</h1>
+
+<div class="section">
+<h2>Workout Entry</h2>
+<label for="workoutDate">Workout Date:</label>
+<input type="date" id="workoutDate" required>
+
+<label for="exercise">Exercise:</label>
+<input list="exerciseListInput" id="exercise" placeholder="Select or add exercise">
+<datalist id="exerciseListInput"></datalist>
+
+<label for="weight">Weight (lbs):</label>
+<input type="number" id="weight">
+
+<label for="reps">Reps:</label>
+<input type="number" id="reps">
+
+<label for="sets">Sets:</label>
+<input type="number" id="sets">
+
+<button id="addWorkout" type="button">Add Workout</button>
+</div>
+
+<div class="section">
+<h2>Daily Tracking</h2>
+<label for="bodyWeight">Body Weight (lbs):</label>
+<input type="number" id="bodyWeight">
+
+<label for="protein">Protein Intake (g):</label>
+<input type="number" id="protein">
+
+<button id="addDaily" type="button">Add Daily Stats</button>
+</div>
+
+<div class="section">
+<h2>Workout Log</h2>
+<div id="workoutList"></div>
+</div>
+
+<div class="section">
+<h2>Progress Chart</h2>
+<select id="chartExercise"></select>
+<canvas id="progressChart"></canvas>
+</div>
+
+<div class="section">
+<h2>Backup & Restore</h2>
+<button id="exportData">Export Data</button>
+<input type="file" id="importFile" accept=".json" style="display:none;">
+<button id="importData">Import Data</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let workouts = JSON.parse(localStorage.getItem('workouts')) || [];
+let dailyStats = JSON.parse(localStorage.getItem('dailyStats')) || [];
+let exerciseList = JSON.parse(localStorage.getItem('exerciseList')) || ['Bench Press','Squat','Deadlift','Overhead Press','Pull-Up','Barbell Row'];
+
+const workoutListDiv = document.getElementById('workoutList');
+const chartExerciseSelect = document.getElementById('chartExercise');
+const ctx = document.getElementById('progressChart').getContext('2d');
+let chart;
+let editIndex = null;
+
+function saveData() {
+  localStorage.setItem('workouts', JSON.stringify(workouts));
+  localStorage.setItem('dailyStats', JSON.stringify(dailyStats));
+  localStorage.setItem('exerciseList', JSON.stringify(exerciseList));
+  renderWorkouts();
+  renderExerciseList();
+  renderChart();
+}
+
+function renderWorkouts() {
+  workoutListDiv.innerHTML = '';
+  workouts.sort((a,b) => new Date(b.date) - new Date(a.date));
+  workouts.forEach((w,i) => {
+    const div = document.createElement('div');
+    div.className = 'workout-entry';
+    div.innerHTML = `
+      <div>${w.date}: ${w.exercise} - ${w.weight} lbs x ${w.reps} reps x ${w.sets} sets</div>
+      <button onclick="editWorkout(${i})">Edit</button>
+      <button onclick="deleteWorkout(${i})">Delete</button>
+    `;
+    workoutListDiv.appendChild(div);
+  });
+}
+
+function renderExerciseList() {
+  const dl = document.getElementById('exerciseListInput');
+  dl.innerHTML = '';
+  exerciseList.forEach(ex => { const opt = document.createElement('option'); opt.value = ex; dl.appendChild(opt); });
+  chartExerciseSelect.innerHTML = '<option value="">Select exercise</option>';
+  exerciseList.forEach(ex => { const opt = document.createElement('option'); opt.value = ex; opt.textContent = ex; chartExerciseSelect.appendChild(opt); });
+}
+
+function renderChart() {
+  const ex = chartExerciseSelect.value;
+  if (!ex) return;
+  const data = workouts.filter(w => w.exercise === ex).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const labels = data.map(w => w.date);
+  const weights = data.map(w => w.weight);
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{ label: ex + ' Weight (lbs)', data: weights, borderWidth: 2 }] },
+    options: { responsive: true }
+  });
+}
+
+function addWorkout() {
+  const exercise = document.getElementById('exercise').value.trim();
+  const weight = +document.getElementById('weight').value;
+  const reps = +document.getElementById('reps').value;
+  const sets = +document.getElementById('sets').value;
+  const workoutDate = document.getElementById('workoutDate').value || new Date().toISOString().slice(0,10);
+  if (!exercise || !weight || !reps || !sets) return alert('Fill all fields');
+  const workout = { date: workoutDate, exercise, weight, reps, sets };
+  if (editIndex !== null) {
+    workouts[editIndex] = workout;
+    editIndex = null;
+    document.getElementById('addWorkout').textContent = 'Add Workout';
+  } else {
+    workouts.push(workout);
+    if (!exerciseList.includes(exercise)) exerciseList.push(exercise);
+  }
+  saveData();
+  document.getElementById('exercise').value = '';
+  document.getElementById('weight').value = '';
+  document.getElementById('reps').value = '';
+  document.getElementById('sets').value = '';
+  document.getElementById('workoutDate').value = new Date().toISOString().slice(0,10);
+}
+
+function editWorkout(i) {
+  const w = workouts[i];
+  document.getElementById('exercise').value = w.exercise;
+  document.getElementById('weight').value = w.weight;
+  document.getElementById('reps').value = w.reps;
+  document.getElementById('sets').value = w.sets;
+  document.getElementById('workoutDate').value = w.date;
+  editIndex = i;
+  document.getElementById('addWorkout').textContent = 'Update Workout';
+}
+
+function deleteWorkout(i) {
+  if (!confirm('Delete this workout?')) return;
+  workouts.splice(i,1);
+  saveData();
+}
+
+document.getElementById('addWorkout').addEventListener('click', addWorkout);
+
+document.getElementById('addDaily').addEventListener('click', () => {
+  const bodyWeight = +document.getElementById('bodyWeight').value;
+  const protein = +document.getElementById('protein').value;
+  const date = new Date().toISOString().slice(0,10);
+  dailyStats.push({ date, bodyWeight, protein });
+  saveData();
+});
+
+chartExerciseSelect.addEventListener('change', renderChart);
+
+document.getElementById('exportData').addEventListener('click', () => {
+  const data = { workouts, dailyStats, exerciseList };
+  const blob = new Blob([JSON.stringify(data,null,2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'freilifts_backup.json'; a.click(); URL.revokeObjectURL(url);
+});
+
+document.getElementById('importData').addEventListener('click', () => document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      const imported = JSON.parse(evt.target.result);
+      workouts = imported.workouts || [];
+      dailyStats = imported.dailyStats || [];
+      exerciseList = imported.exerciseList || exerciseList;
+      saveData();
+      alert('Import successful!');
+    } catch (err) { alert('Invalid file'); }
+  };
+  reader.readAsText(file);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('workoutDate').value = new Date().toISOString().slice(0,10);
+  renderWorkouts();
+  renderExerciseList();
+});
+</script>
+</body>
+</html>
