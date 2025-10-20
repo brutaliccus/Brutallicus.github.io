@@ -1,150 +1,235 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Workout Log</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icons/icon-192x192.png">
-  <meta name="theme-color" content="#ffffff">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Freilifts - Exercise Log</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#343a40"/>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-  <header>
-    <h1>Workout Log</h1>
-  </header>
-
-  <main>
-    <div class="tab">
-      <button class="tablinks" onclick="openTab(event, 'Log')">Workout Log</button>
-      <button class="tablinks" onclick="openTab(event, 'Charts')">Charts</button>
-    </div>
-
-    <div id="Log" class="tabcontent">
-      <section id="exercise-management">
-        <h2>Manage Exercises</h2>
-        <label for="new-exercise-title">Exercise Title:</label>
-        <input type="text" id="new-exercise-title" name="new-exercise-title">
-
-        <label for="new-exercise-category">Category:</label>
-        <select id="new-exercise-category" name="new-exercise-category">
-            <option value="Push">Push</option>
-            <option value="Pull">Pull</option>
-            <option value="Legs">Legs</option>
-            <option value="Other">Other</option>
-        </select>
-
-        <button id="add-exercise">Add Exercise</button>
-        <input type="file" id="exercise-csv-upload" accept=".csv" style="display: none;">
-        <button id="import-exercises-button">Import Exercises from CSV</button>
-    </section>
-
-    <section id="workout-entry">
-      <h2>Enter Workout</h2>
-      <label for="date">Date:</label>
-      <input type="date" id="date" name="date">
-
-      <label for="exercise">Exercise:</label>
-      <select id="exercise" name="exercise">
-        <optgroup label="Push" id="pushing-group">
-          <option value="Bench Press">Bench Press</option>
-          <option value="Overhead Press">Overhead Press</option>
-          <option value="Dips">Dips</option>
-          <!-- More Pushing Exercises -->
-        </optgroup>
-        <optgroup label="Pull" id="pulling-group">
-          <option value="Pull-ups">Pull-ups</option>
-          <option value="Rows">Rows</option>
-          <option value="Lat Pulldowns">Lat Pulldowns</option>
-          <!-- More Pulling Exercises -->
-        </optgroup>
-        <optgroup label="Legs" id="legs-group">
-          <option value="Squats">Squats</option>
-          <option value="Deadlifts">Deadlifts</option>
-          <option value="Leg Press">Leg Press</option>
-          <!-- More Leg Exercises -->
-        </optgroup>
-        <optgroup label="Other" id="other-group">
-        </optgroup>
-      </select>
-
-      <label for="weight">Weight (lbs):</label>
-      <input type="number" id="weight" name="weight">
-
-      <label for="reps">Reps:</label>
-      <input type="number" id="reps" name="reps">
-
-      <label for="sets">Sets:</label>
-      <input type="number" id="sets" name="sets">
-
-      <button id="add-workout">Add Workout</button>
-    </section>
-
-    <section id="macro-entry">
-      <h2>Daily Macros</h2>
-      <label for="macro-date">Date:</label>
-      <input type="date" id="macro-date" name="macro-date">
-
-      <label for="fat">Fat (g):</label>
-      <input type="number" id="fat" name="fat">
-      <label for="protein">Protein (g):</label>
-      <input type="number" id="protein" name="protein">
-      <label for="carbs">Carbs (g):</label>
-      <input type="number" id="carbs" name="carbs">
-      <button id="add-macros">Add Macros</button>
-
-      <h3>Totals:</h3>
-      <p>Fat: <span id="total-fat">0</span>g</p>
-      <p>Protein: <span id="total-protein">0</span>g</p>
-      <p>Carbs: <span id="total-carbs">0</span>g</p>
-      <p>Calories: <span id="total-calories">0</span></p>
-    </section>
-
-    <section id="workout-log">
-      <h2>Workout Log</h2>
-      <label for="log-date-select">Select Date:</label>
-      <input type="date" id="log-date-select" name="log-date-select">
-      <ul id="workout-list"></ul>
-    </section>
-
-    <section id="prs">
-      <h2>My PRs</h2>
-        <label for="pr-category-select">Select Category:</label>
-        <select id="pr-category-select" name="pr-category-select">
-            <option value="Push">Push</option>
-            <option value="Pull">Pull</option>
-            <option value="Legs">Legs</option>
-            <option value="Other">Other</option>
-        </select>
-
-        <div id="pr-exercise-list">
-            <!-- PRs will be dynamically listed here -->
+    <header>
+        <div class="theme-switcher-container">
+            <label for="theme-switcher">Theme:</label>
+            <select id="theme-switcher">
+                <option value="theme-light">Light</option>
+                <option value="theme-dark">Dark</option>
+                <option value="theme-forest">Forest</option>
+            </select>
         </div>
-    </section>
+        <h1>Freilifts</h1>
+        <nav id="tab-nav">
+            <button class="tab-button" data-tab="tab-workout-log">Workout Log</button>
+            <button class="tab-button" data-tab="tab-manage-exercises">Manage Exercises</button>
+            <button class="tab-button" data-tab="tab-food-log">Food Log</button>
+            <button class="tab-button" data-tab="tab-personal-records">Personal Records</button>
+            <button class="tab-button" data-tab="tab-my-progress">My Progress</button>
+        </nav>
+    </header>
 
-    <section id="exercise-weight-chart">
-        <h2>Exercise Weight Chart</h2>
-        <label for="exercise-select-chart">Select Exercise:</label>
-        <select id="exercise-select-chart" name="exercise-select-chart"></select>
-        <canvas id="weight-over-time-chart" width="400" height="200"></canvas>
-    </section>
-</div>
+    <main>
+        <!-- Tab 1: Workout Log -->
+        <div id="tab-workout-log" class="tab-content">
+            <div class="workout-log-layout">
 
-    <div id="Charts" class="tabcontent">
-      <section id="charts">
-        <h2>Charts</h2>
-        <canvas id="calorie-chart" width="400" height="200"></canvas>
-        <canvas id="protein-chart" width="400" height="200"></canvas>
-      </section>
-    </div>
-  </main>
+                <div class="workout-main-panel">
+                    
+                    <section id="create-workout-section" class="card">
+                        <h3>Create a Workout Log</h3>
+                        <form id="create-workout-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="workout-date">Date</label>
+                                    <input type="date" id="workout-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="workout-bodyweight">Body Weight (lbs)</label>
+                                    <input type="number" id="workout-bodyweight" step="0.1" placeholder="e.g., 185.5">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="workout-category">Workout Type</label>
+                                <select id="workout-category"></select>
+                            </div>
+                            <button type="submit" class="btn-primary">Start Workout</button>
+                        </form>
+                    </section>
 
-  <footer>
-    <p>&copy; 2023 Workout Log</p>
-  </footer>
+                    <section id="current-workout-section" class="card" style="display: none;">
+                        <div class="workout-header">
+                            <button id="prev-workout-btn" class="nav-arrow" title="Previous Workout">&#9664;</button>
+                            <h3 id="workout-title"></h3>
+                            <button id="next-workout-btn" class="nav-arrow" title="Next Workout">&#9654;</button>
+                            <button id="edit-workout-btn" class="icon-btn edit" title="Edit Workout">&#9998;</button>
+                            <button id="delete-workout-btn" class="icon-btn delete" title="Delete this workout">&#128465;</button>
+                        </div>
+                        
+                        <form id="add-log-entry-form">
+                            <div class="form-group" style="position: relative;">
+                                <label for="search-exercise-input">Add Exercise</label>
+                                <input type="text" id="search-exercise-input" placeholder="Start typing..." autocomplete="off">
+                                <div id="search-results-container"></div>
+                            </div>
+                            <div class="log-inputs">
+                                <div class="form-group">
+                                    <label for="log-weight">Weight (lbs)</label>
+                                    <input type="number" id="log-weight" step="0.1" placeholder="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="log-sets">Sets</label>
+                                    <input type="number" id="log-sets" placeholder="3">
+                                </div>
+                                <div class="form-group">
+                                    <label for="log-reps">Reps</label>
+                                    <input type="number" id="log-reps" placeholder="8">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary">Add to Workout</button>
+                        </form>
+                        
+                        <div id="workout-log-entries"></div>
 
-  <script src="script.js"></script>
+                        <div id="workout-controls" class="workout-controls">
+                            <button id="finish-workout-btn" class="btn-primary">Finish Workout</button>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="workout-summary-panel">
+                    <section class="card">
+                        <h3>Last Workout Summary</h3>
+                        <div class="form-group">
+                            <label for="summary-category-select">View last workout for:</label>
+                            <select id="summary-category-select"></select>
+                        </div>
+                        <div id="workout-summary-content">
+                            <p>Select a category to see the last workout.</p>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Manage Exercises -->
+        <div id="tab-manage-exercises" class="tab-content">
+            <h2>Manage Exercises</h2>
+            <section class="card">
+                <h3>Add New Exercise</h3>
+                <form id="add-exercise-form">
+                    <div class="form-group">
+                        <label for="new-exercise-name">Exercise Name:</label>
+                        <input type="text" id="new-exercise-name" placeholder="e.g., Bench Press" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-exercise-category">Category:</label>
+                        <select id="new-exercise-category">
+                            <option value="Push">Push</option>
+                            <option value="Pull">Pull</option>
+                            <option value="Legs">Legs</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Add Exercise</button>
+                        <button type="button" id="import-csv-btn" class="btn-secondary" title="Import a CSV file with 'exercise' and 'category' headers.">
+                            Import CSV
+                        </button>
+                        <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
+                    </div>
+                </form>
+            </section>
+            <section class="card">
+                <h3>Exercise List</h3>
+                <div id="exercise-list-container"></div>
+            </section>
+        </div>
+
+        <!-- Tab 3: Food Log -->
+        <div id="tab-food-log" class="tab-content">
+            <section id="create-food-log-section" class="card">
+                <h3>Log Food for a Day</h3>
+                <form id="create-food-log-form">
+                    <div class="form-group">
+                        <label for="food-log-date">Date</label>
+                        <input type="date" id="food-log-date" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Start Food Log</button>
+                </form>
+            </section>
+
+            <section id="current-food-log-section" class="card" style="display: none;">
+                <div class="workout-header">
+                    <button id="prev-food-log-btn" class="nav-arrow" title="Previous Day">&#9664;</button>
+                    <h3 id="food-log-title"></h3>
+                    <button id="next-food-log-btn" class="nav-arrow" title="Next Day">&#9654;</button>
+                    <button id="edit-food-log-btn" class="icon-btn edit" title="Edit Day's Log">&#9998;</button>
+                    <button id="delete-food-log-btn" class="icon-btn delete" title="Delete Day's Log">&#128465;</button>
+                </div>
+                
+                <form id="add-food-item-form">
+                    <div class="log-inputs">
+                        <div class="form-group" style="flex-grow: 2; position: relative;">
+                            <label for="food-item-name">Search or Add Food</label>
+                            <input type="text" id="food-item-name" placeholder="e.g., Chicken Breast" required autocomplete="off">
+                            <div id="food-search-results-container"></div>
+                        </div>
+                        <div class="form-group">
+                             <label for="food-item-meal">Meal</label>
+                            <select id="food-item-meal">
+                                <option>Breakfast</option>
+                                <option>Lunch</option>
+                                <option>Dinner</option>
+                                <option>Snack</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="log-inputs">
+                        <div class="form-group">
+                            <label for="food-item-fat">Fat (g)</label>
+                            <input type="number" id="food-item-fat" step="0.1" placeholder="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="food-item-carbs">Carbs (g)</label>
+                            <input type="number" id="food-item-carbs" step="0.1" placeholder="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="food-item-protein">Protein (g)</label>
+                            <input type="number" id="food-item-protein" step="0.1" placeholder="0" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-primary">Add Food</button>
+                </form>
+                
+                <div class="food-log-display-layout">
+                    <div id="food-log-entries"></div>
+                    <div class="totals-display">
+                        <h3>Daily Totals</h3>
+                        <p id="food-log-totals"></p>
+                        <div class="chart-container">
+                             <canvas id="macro-pie-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="workout-controls">
+                    <button id="finish-food-log-btn" class="btn-primary">Done Eating</button>
+                </div>
+            </section>
+        </div>
+
+        <!-- Other Tabs -->
+        <div id="tab-personal-records" class="tab-content"><h2>Personal Records</h2><p>Feature coming soon...</p></div>
+        <div id="tab-my-progress" class="tab-content"><h2>My Progress</h2><p>Feature coming soon...</p></div>
+    </main>
+    
+    <script>
+        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/service-worker.js').then(reg => console.log('SW registered.')).catch(err => console.log('SW registration failed: ', err)); }); }
+    </script>
+    <script src="app.js"></script>
+
 </body>
 </html>
