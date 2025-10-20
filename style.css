@@ -33,6 +33,45 @@ body.theme-forest {
     --header-background: #264653;
 }
 
+/* --- AUTHENTICATION STYLES --- */
+#auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100vw;
+    height: 100vh;
+    background-color: var(--background-color);
+}
+.auth-card {
+    width: 100%;
+    max-width: 400px;
+    padding: 2rem;
+}
+.auth-switch {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: 0.9em;
+}
+.auth-error {
+    color: var(--danger-color);
+    text-align: center;
+    margin-top: 1rem;
+    min-height: 1.2em;
+}
+.btn-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    color: var(--primary-color);
+    text-decoration: underline;
+    font-size: inherit;
+    cursor: pointer;
+}
+.btn-link:hover {
+    color: var(--secondary-color);
+}
+
 /* --- GENERAL STYLES --- */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -49,14 +88,28 @@ header {
     position: relative;
     transition: background-color 0.3s;
 }
-.theme-switcher-container {
+.header-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     position: absolute;
     top: 1rem;
+    left: 1rem;
     right: 1rem;
+}
+#user-info {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
 }
+#user-info span { font-weight: bold; }
+#logout-btn {
+    font-size: 0.8em;
+    padding: 0.3rem 0.6rem;
+    background-color: var(--secondary-color);
+    color: var(--text-color-light);
+}
+.theme-switcher-container { display: flex; align-items: center; gap: 0.5rem; }
 .theme-switcher-container label { font-size: 0.9em; }
 #theme-switcher {
     background-color: var(--secondary-color);
@@ -65,7 +118,7 @@ header {
     border-radius: 4px;
     padding: 0.2rem 0.4rem;
 }
-h1 { text-align: center; margin: 0 0 1rem 0; }
+h1 { text-align: center; margin: 2rem 0 1rem 0; }
 nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.5rem; }
 .tab-button {
     padding: 0.5rem 1rem;
@@ -86,7 +139,7 @@ nav { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.5rem; }
 main { padding: 1rem; }
 .tab-content { display: none; }
 .tab-content.active { display: block; }
-h2, h4 { margin-top: 0; }
+h2, h3, h4 { margin-top: 0; }
 .card {
     background-color: var(--card-background);
     border-radius: 8px;
@@ -98,15 +151,11 @@ h2, h4 { margin-top: 0; }
 }
 .form-group { margin-bottom: 1rem; }
 .form-group label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
-
 .form-row {
     display: flex;
     gap: 1rem;
 }
-.form-row .form-group {
-    flex: 1;
-}
-
+.form-row .form-group { flex: 1; }
 input[type="text"], select, input[type="date"], input[type="number"] {
     width: 100%;
     padding: 0.75rem;
@@ -115,6 +164,11 @@ input[type="text"], select, input[type="date"], input[type="number"] {
     box-sizing: border-box;
     background-color: var(--background-color);
     color: var(--text-color);
+}
+input:disabled, select:disabled {
+    background-color: var(--background-color);
+    opacity: 0.7;
+    cursor: not-allowed;
 }
 button {
     cursor: pointer;
@@ -138,6 +192,15 @@ button {
 }
 .icon-btn:hover { color: var(--primary-color); }
 .icon-btn.delete:hover { color: var(--danger-color); }
+.card-header-with-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+.card-header-with-action h3 {
+    margin-bottom: 0;
+}
 
 /* --- Workout Log Tab Styles --- */
 .workout-log-layout {
@@ -163,6 +226,18 @@ button {
     cursor: pointer;
 }
 .nav-arrow:disabled { color: var(--secondary-color); cursor: not-allowed; opacity: 0.5; }
+.bodyweight-display {
+    text-align: center;
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    color: var(--secondary-color);
+}
+.bodyweight-display strong {
+    color: var(--text-color);
+    margin-right: 0.5rem;
+}
+.bodyweight-display .icon-btn { font-size: 1rem; vertical-align: middle; }
 #add-log-entry-form, #add-food-item-form {
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
@@ -179,12 +254,26 @@ button {
     border-top: none;
     border-radius: 0 0 4px 4px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    max-height: 150px;
+    max-height: 200px;
     overflow-y: auto;
     z-index: 100;
 }
-.search-result-item { padding: 0.75rem; cursor: pointer; }
-.search-result-item:hover { background-color: var(--primary-color); color: var(--text-color-light); }
+.search-result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    cursor: pointer;
+}
+.search-result-item:hover {
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+}
+.search-result-item .icon-btn {
+    font-size: 1rem;
+    padding: 0 0.5rem;
+    flex-shrink: 0;
+}
 #workout-log-entries, #workout-summary-content, #food-log-entries { width: 100%; }
 .log-table { width: 100%; border-collapse: collapse; margin-top: 1rem; margin-bottom: 1.5rem; }
 .log-table th, .log-table td { text-align: left; padding: 0.75rem; border-bottom: 1px solid var(--border-color); }
@@ -208,6 +297,14 @@ button {
     top: 1rem;
 }
 .totals-display h3 { margin: 0 0 0.5rem 0; }
+#calorie-goal-progress {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+}
+#calorie-goal-progress .calories-consumed {
+    color: var(--primary-color);
+}
 .totals-display p { font-size: 1.1rem; font-weight: bold; margin: 0; margin-bottom: 1.5rem; }
 .chart-container {
     position: relative;
@@ -219,6 +316,62 @@ button {
     .totals-display { position: static; }
 }
 
+/* --- Personal Records Tab Styles --- */
+.pr-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+.pr-layout .card { width: 100%; box-sizing: border-box; }
+@media (max-width: 768px) { .pr-layout { grid-template-columns: 1fr; } }
+
+/* --- My Progress Tab Styles --- */
+.progress-charts-layout {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+.chart-wrapper {
+    position: relative;
+    height: 300px;
+    width: 100%;
+    margin-top: 1rem;
+}
+.reset-zoom-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    z-index: 10;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.8em;
+    opacity: 0.7;
+    background-color: var(--secondary-color);
+    color: var(--text-color-light);
+}
+.reset-zoom-btn:hover {
+    opacity: 1;
+}
+@media (max-width: 1200px) { .progress-charts-layout { grid-template-columns: 1fr; } }
+
+/* --- About Me Tab Styles --- */
+.about-me-layout {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+#calorie-results-container h4 {
+    color: var(--secondary-color);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+#calorie-results-container p { font-size: 1.1rem; line-height: 1.6; }
+#calorie-results-container strong { font-size: 1.2rem; color: var(--primary-color); }
+@media (max-width: 900px) { .about-me-layout { grid-template-columns: 1fr; } }
+
 /* Manage Exercises List Styles */
-.exercise-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid #eee; }
+.exercise-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); }
 .exercise-item .actions { display: flex; gap: 0.5rem; }
