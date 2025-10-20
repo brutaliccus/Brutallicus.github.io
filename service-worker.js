@@ -1,10 +1,13 @@
-const CACHE_NAME = 'freilifts-v1';
+const CACHE_NAME = 'freilifts-v2'; // Updated cache version
 const URLS_TO_CACHE = [
     '/',
     '/index.html',
     '/style.css',
     '/app.js',
     '/manifest.json',
+    'https://cdn.jsdelivr.net/npm/chart.js', // Cache the chart library
+    'https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js',
+    'https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js',
     '/icons/icon-192x192.png',
     '/icons/icon-512x512.png'
 ];
