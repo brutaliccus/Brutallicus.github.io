@@ -1,7 +1,7 @@
 {
     "name": "Freilifts Exercise Log",
     "short_name": "Freilifts",
-    "description": "A simple PWA for logging exercises and workouts.",
+    "description": "A PWA for logging workouts, food, and tracking progress.",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#e9ecef",
