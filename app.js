@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const USDA_API_KEY = 'aemBTeknGhNmAlKKGpJUiewRCOMdaAVYlAtK91an';
 
-const app = firebase.initializeApp(firebaseConfig);
+    const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     // --- App State & Constants ---
@@ -545,7 +545,7 @@ const app = firebase.initializeApp(firebaseConfig);
     createFoodLogForm.addEventListener('submit', (e) => { e.preventDefault(); const date = foodLogDateInput.value; if (!foodLogs[date]) { foodLogs[date] = { items: [], isFinished: false }; } currentFoodLogDate = date; saveDataToFirebase(); renderFoodLogView(); });
     prevFoodLogBtn.addEventListener('click', () => { const sortedDates = Object.keys(foodLogs).sort((a, b) => new Date(b) - new Date(a)); const currentIndex = sortedDates.indexOf(currentFoodLogDate); if (currentIndex < sortedDates.length - 1) { currentFoodLogDate = sortedDates[currentIndex + 1]; renderFoodLogView(); } });
     nextFoodLogBtn.addEventListener('click', () => { const sortedDates = Object.keys(foodLogs).sort((a, b) => new Date(b) - new Date(a)); const currentIndex = sortedDates.indexOf(currentFoodLogDate); if (currentIndex > 0) { currentFoodLogDate = sortedDates[currentIndex - 1]; renderFoodLogView(); } });
-    addFoodItemForm.addEventListener('submit', (e) => { e.preventDefault(); if (!currentFoodLogDate) return; const fat = parseFloat(foodItemFatInput.value) || 0; const carbs = parseFloat(foodItemCarbsInput.value) || 0; const protein = parseFloat(foodItemProteinInput.value) || 0; const displayName = foodItemNameInput.value.trim(); if (!displayName) { alert("Please enter a food name."); return; } const canonicalName = displayName.replace(/\s\([^)]+\)$/, '').trim(); const newItem = { id: Date.now(), name: displayName, meal: foodItemMealSelect.value, fat, carbs, protein, calories: (fat * 9) + (carbs * 4) + (protein * 4) }; (foodLogs[currentFoodLogDate].items = foodLogs[currentFoodLogDate].items || []).push(newItem); const isNewUnique = !(uniqueFoods || []).some(food => food.name.toLowerCase() === canonicalName.toLowerCase()); if (isNewUnique) { (uniqueFoods || []).push({ name: canonicalName, fat: fat, carbs: carbs, protein: protein }); } saveDataToFirebase(); renderFoodLogView(); addFoodItemForm.reset(); foodItemNameInput.focus(); });
+    addFoodItemForm.addEventListener('submit', (e) => { e.preventDefault(); if (!currentFoodLogDate) return; const fat = parseFloat(foodItemFatInput.value) || 0; const carbs = parseFloat(foodItemCarbsInput.value) || 0; const protein = parseFloat(foodItemProteinInput.value) || 0; const displayName = foodItemNameInput.value.trim(); if (!displayName) { alert("Please enter a food name."); return; } const canonicalName = displayName.replace(/\s\([^)]+\)$/, '').trim(); const newItem = { id: Date.now(), name: displayName, meal: foodItemMealSelect.value, fat, carbs, protein, calories: (fat * 9) + (carbs * 4) + (protein * 4) }; (foodLogs[currentFoodLogDate].items = foodLogs[currentFoodLogDate].items || []).push(newItem); const isNewUnique = !(uniqueFoods || []).some(food => food.name.toLowerCase() === canonicalName.toLowerCase()); if (isNewUnique) { (uniqueFoods || []).push({ name: canonicalName, fat, carbs, protein }); } saveDataToFirebase(); renderFoodLogView(); addFoodItemForm.reset(); foodItemNameInput.focus(); });
     deleteFoodLogBtn.addEventListener('click', () => { if (!currentFoodLogDate) return; if (confirm("Delete this day's food log?")) { delete foodLogs[currentFoodLogDate]; saveDataToFirebase(); currentFoodLogDate = null; renderFoodLogView(); } });
     finishFoodLogBtn.addEventListener('click', () => { const log = foodLogs[currentFoodLogDate]; if (log) { log.isFinished = true; saveDataToFirebase(); renderFoodLogView(); } });
     editFoodLogBtn.addEventListener('click', () => { const log = foodLogs[currentFoodLogDate]; if (log) { log.isFinished = false; saveDataToFirebase(); renderFoodLogView(); } });
@@ -575,4 +575,3 @@ const app = firebase.initializeApp(firebaseConfig);
 
     initializeApp();
 });
-
