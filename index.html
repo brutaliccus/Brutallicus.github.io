@@ -193,26 +193,38 @@
             <!-- Tab 3: Food Log -->
             <div id="tab-food-log" class="tab-content">
                 <section class="card">
-                    <h3>Search Nutrition Facts (USDA)</h3>
-                    <form id="usda-search-form">
-                        <div class="form-group">
-                            <label for="usda-search-input">Search for a food</label>
-                            <input type="text" id="usda-search-input" placeholder="e.g., raw chicken breast" required>
-                        </div>
-                        <button type="submit" class="btn-secondary">Search</button>
-                    </form>
-                    <div id="usda-search-results-container"></div>
+                    <div class="card-header-with-action">
+                        <button class="icon-btn collapse-toggle-btn" title="Toggle Section">&#9660;</button>
+                        <h3>Search Nutrition Facts (USDA)</h3>
+                    </div>
+                    <div class="collapsible-content">
+                        <form id="usda-search-form">
+                            <div class="form-group">
+                                <label for="usda-search-input">Search for a food</label>
+                                <input type="text" id="usda-search-input" placeholder="e.g., raw chicken breast" required>
+                            </div>
+                            <button type="submit" class="btn-secondary">Search</button>
+                        </form>
+                        <div id="usda-search-results-container"></div>
+                    </div>
                 </section>
+
                 <section id="create-food-log-section" class="card">
-                    <h3>Log Food for a Day</h3>
-                    <form id="create-food-log-form">
-                        <div class="form-group">
-                            <label for="food-log-date">Date</label>
-                            <input type="date" id="food-log-date" required>
-                        </div>
-                        <button type="submit" class="btn-primary">Start Food Log</button>
-                    </form>
+                    <div class="card-header-with-action">
+                        <button class="icon-btn collapse-toggle-btn" title="Toggle Section">&#9660;</button>
+                        <h3>Log Food for a Day</h3>
+                    </div>
+                    <div class="collapsible-content">
+                        <form id="create-food-log-form">
+                            <div class="form-group">
+                                <label for="food-log-date">Date</label>
+                                <input type="date" id="food-log-date" required>
+                            </div>
+                            <button type="submit" class="btn-primary">Start Food Log</button>
+                        </form>
+                    </div>
                 </section>
+                
                 <section id="current-food-log-section" class="card" style="display: none;">
                     <div class="workout-header">
                         <button id="prev-food-log-btn" class="nav-arrow" title="Previous Day">&#9664;</button>
@@ -221,52 +233,58 @@
                         <button id="edit-food-log-btn" class="icon-btn edit" title="Edit Day's Log">&#9998;</button>
                         <button id="delete-food-log-btn" class="icon-btn delete" title="Delete Day's Log">&#128465;</button>
                     </div>
-                    <form id="add-food-item-form">
-                        <div class="log-inputs">
-                            <div class="form-group" style="flex-grow: 2; position: relative;">
-                                <label for="food-item-name">Search or Add Food</label>
-                                <input type="text" id="food-item-name" placeholder="e.g., Chicken Breast" required autocomplete="off">
-                                <div id="food-search-results-container"></div>
-                            </div>
-                            <div class="form-group">
-                                 <label for="food-item-meal">Meal</label>
-                                <select id="food-item-meal">
-                                    <option>Breakfast</option>
-                                    <option>Lunch</option>
-                                    <option>Dinner</option>
-                                    <option>Snack</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="log-inputs">
-                            <div class="form-group">
-                                <label for="food-item-fat">Fat (g)</label>
-                                <input type="number" id="food-item-fat" step="0.1" placeholder="0" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="food-item-carbs">Carbs (g)</label>
-                                <input type="number" id="food-item-carbs" step="0.1" placeholder="0" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="food-item-protein">Protein (g)</label>
-                                <input type="number" id="food-item-protein" step="0.1" placeholder="0" required>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn-primary">Add Food</button>
-                    </form>
-                    <div class="food-log-display-layout">
-                        <div id="food-log-entries"></div>
-                        <div class="totals-display">
-                            <h3>Daily Totals</h3>
-                            <div id="calorie-goal-progress"></div>
-                            <p id="food-log-totals"></p>
-                            <div class="chart-container">
-                                 <canvas id="macro-pie-chart"></canvas>
-                            </div>
-                        </div>
+                    <div class="card-header-with-action">
+                        <button class="icon-btn collapse-toggle-btn" title="Toggle Section">&#9660;</button>
+                        <h3>Current Day's Log</h3>
                     </div>
-                    <div class="workout-controls">
-                        <button id="finish-food-log-btn" class="btn-primary">Done Eating</button>
+                    <div class="collapsible-content">
+                        <form id="add-food-item-form">
+                            <div class="log-inputs">
+                                <div class="form-group" style="flex-grow: 2; position: relative;">
+                                    <label for="food-item-name">Search or Add Food</label>
+                                    <input type="text" id="food-item-name" placeholder="e.g., Chicken Breast" required autocomplete="off">
+                                    <div id="food-search-results-container"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="food-item-meal">Meal</label>
+                                    <select id="food-item-meal">
+                                        <option>Breakfast</option>
+                                        <option>Lunch</option>
+                                        <option>Dinner</option>
+                                        <option>Snack</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="log-inputs">
+                                <div class="form-group">
+                                    <label for="food-item-fat">Fat (g)</label>
+                                    <input type="number" id="food-item-fat" step="0.1" placeholder="0" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="food-item-carbs">Carbs (g)</label>
+                                    <input type="number" id="food-item-carbs" step="0.1" placeholder="0" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="food-item-protein">Protein (g)</label>
+                                    <input type="number" id="food-item-protein" step="0.1" placeholder="0" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-primary">Add Food</button>
+                        </form>
+                        <div class="food-log-display-layout">
+                            <div id="food-log-entries"></div>
+                            <div class="totals-display">
+                                <h3>Daily Totals</h3>
+                                <div id="calorie-goal-progress"></div>
+                                <p id="food-log-totals"></p>
+                                <div class="chart-container">
+                                    <canvas id="macro-pie-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="workout-controls">
+                            <button id="finish-food-log-btn" class="btn-primary">Done Eating</button>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -280,32 +298,32 @@
 
             <!-- Tab 5: My Progress -->
             <div id="tab-my-progress" class="tab-content">
-            <h2>My Progress</h2>
-            <p>Use your mouse wheel to zoom and click-and-drag to pan the charts.</p>
-            <div class="progress-charts-layout">
-                <div class="card">
-                    <h3>Calories Over Time</h3>
-                    <div class="chart-wrapper">
-                        <canvas id="calories-chart"></canvas>
-                        <button class="reset-zoom-btn" data-chart-id="calories-chart">Reset Zoom</button>
+                <h2>My Progress</h2>
+                <p>Use your mouse wheel to zoom and click-and-drag to pan the charts.</p>
+                <div class="progress-charts-layout">
+                    <div class="card">
+                        <h3>Calories Over Time</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="calories-chart"></canvas>
+                            <button class="reset-zoom-btn" data-chart-id="calories-chart">Reset Zoom</button>
+                        </div>
                     </div>
-                </div>
-                <div class="card">
-                    <h3>Protein Over Time</h3>
-                    <div class="chart-wrapper">
-                        <canvas id="protein-chart"></canvas>
-                        <button class="reset-zoom-btn" data-chart-id="protein-chart">Reset Zoom</button>
+                    <div class="card">
+                        <h3>Protein Over Time</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="protein-chart"></canvas>
+                            <button class="reset-zoom-btn" data-chart-id="protein-chart">Reset Zoom</button>
+                        </div>
                     </div>
-                </div>
-                <div class="card">
-                    <h3>Body Weight Over Time</h3>
-                    <div class="chart-wrapper">
-                        <canvas id="weight-chart"></canvas>
-                        <button class="reset-zoom-btn" data-chart-id="weight-chart">Reset Zoom</button>
+                    <div class="card">
+                        <h3>Body Weight Over Time</h3>
+                        <div class="chart-wrapper">
+                            <canvas id="weight-chart"></canvas>
+                            <button class="reset-zoom-btn" data-chart-id="weight-chart">Reset Zoom</button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
             <!-- Tab 6: About Me -->
             <div id="tab-about-me" class="tab-content">
