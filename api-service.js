@@ -1,24 +1,24 @@
 // api-service.js
 
 const ApiService = (() => {
-    // Initialize Firebase
+    // Initialize Firebase using the global `firebaseConfig` from config.js
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
     // --- Firebase Functions ---
 
     const saveDataForUser = (userId, data) => {
-        if (!userId) return Promise.reject("No user ID provided.");
+        if (!userId) return Promise.reject("No user ID provided for saving data.");
         return db.ref('users/' + userId + '/data').set(data);
     };
 
-    const savePreferencesForUser = (userId, preferences) => {
-        if (!userId) return Promise.reject("No user ID provided.");
-        return db.ref('users/' + userId + '/preferences').set(preferences);
+    const savePreferencesForUser = (userId, prefs) => {
+        if (!userId) return Promise.reject("No user ID provided for saving preferences.");
+        return db.ref('users/' + userId + '/preferences').set(prefs);
     };
     
     const loadUser = (userId) => {
-        if (!userId) return Promise.reject("No user ID provided.");
+        if (!userId) return Promise.reject("No user ID provided for loading.");
         return db.ref('users/' + userId).once('value');
     };
 
@@ -26,10 +26,8 @@ const ApiService = (() => {
         const userRef = db.ref('users/' + userId);
         return userRef.once('value').then(snapshot => {
             if (snapshot.exists()) {
-                // Throw an error if the user already exists
                 throw new Error("This name is already taken. Please choose another.");
             } else {
-                // Create the user if they don't exist
                 return userRef.set({ name, pin });
             }
         });
@@ -37,6 +35,7 @@ const ApiService = (() => {
 
     // --- USDA API Function ---
     const searchUsdaApi = async (query) => {
+        // Uses the global USDA_API_KEY from config.js
         const url = `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${USDA_API_KEY}&query=${encodeURIComponent(query)}&pageSize=10`;
         const response = await fetch(url);
         if (!response.ok) {
@@ -45,7 +44,7 @@ const ApiService = (() => {
         return response.json();
     };
 
-    // Expose public functions
+    // Expose public functions to be used by app.js
     return {
         saveDataForUser,
         savePreferencesForUser,
