@@ -11,6 +11,19 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const USDA_API_KEY = 'aemBTeknGhNmAlKKGpJUiewRCOMdaAVYlAtK91an';
 
+    document.addEventListener('DOMContentLoaded', () => {
+
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+    const USDA_API_KEY = 'YOUR_USDA_API_KEY_HERE';
+
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
@@ -554,7 +567,8 @@ document.addEventListener('DOMContentLoaded', () => {
     foodSearchResultsContainer.addEventListener('click', (e) => { const resultItem = e.target.closest('.search-result-item'); if (!resultItem) return; const foodName = resultItem.dataset.foodName; if (e.target.matches('.delete')) { e.stopPropagation(); if (confirm(`Are you sure you want to permanently delete "${foodName}" from your saved foods?`)) { uniqueFoods = uniqueFoods.filter(food => food.name !== foodName); saveDataToFirebase(); foodSearchResultsContainer.innerHTML = ''; } } else { const food = uniqueFoods.find(f => f.name === foodName); if (!food) return; const servings = prompt(`'${food.name}'\n\nHow many servings did you have?`, '1'); if (servings === null) return; const numServings = parseFloat(servings) || 1; foodItemNameInput.value = numServings !== 1 ? `${food.name} (${numServings} servings)` : food.name; foodItemFatInput.value = (food.fat * numServings).toFixed(1); foodItemCarbsInput.value = (food.carbs * numServings).toFixed(1); foodItemProteinInput.value = (food.protein * numServings).toFixed(1); foodSearchResultsContainer.innerHTML = ''; } });
     foodItemNameInput.addEventListener('blur', () => { setTimeout(() => { foodSearchResultsContainer.innerHTML = ''; }, 200); });
     myProgressTab.addEventListener('click', (e) => { if (e.target.matches('.reset-zoom-btn')) { const chartId = e.target.dataset.chartId; if (chartId === 'calories-chart' && caloriesChart) { caloriesChart.resetZoom(); } else if (chartId === 'protein-chart' && proteinChart) { proteinChart.resetZoom(); } else if (chartId === 'weight-chart' && weightChart) { weightChart.resetZoom(); } } });
-    
+    document.getElementById('tab-food-log').addEventListener('click', (e) => { const header = e.target.closest('.card-header-with-action'); if (header) { const card = header.closest('.card'); if (card) { const content = card.querySelector('.collapsible-content'); const button = header.querySelector('.collapse-toggle-btn'); if (content && button) { button.classList.toggle('collapsed'); content.classList.toggle('collapsed'); } } } });
+
     // --- Initialization ---
     const initializeApp = () => {
         loadTheme();
