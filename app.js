@@ -90,25 +90,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveAboutMeBtn = document.getElementById('save-about-me-btn');
     const editAboutMeBtn = document.getElementById('edit-about-me-btn');
     const myProgressTab = document.getElementById('tab-my-progress');
+    const foodLogTab = document.getElementById('tab-food-log');
 
     // --- Core Functions ---
     const sanitizeNameForId = (name) => name.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
     const showApp = () => { authContainer.style.display = 'none'; appContainer.style.display = 'block'; };
     const showAuth = () => { authContainer.style.display = 'flex'; appContainer.style.display = 'none'; };
     const getTodayDateString = () => new Date().toISOString().split('T')[0];
+    
     const applyTheme = (themeName) => {
         document.body.className = '';
         document.body.classList.add(themeName);
         localStorage.setItem('freilifts_theme', themeName);
         if (currentUserId) {
-            ApiService.saveUserPreferences(currentUserId, { theme: themeName });
+            const prefs = {
+                about: getAboutMeData(),
+                goals: userGoals,
+                theme: themeName
+            };
+            ApiService.savePreferencesForUser(currentUserId, prefs);
         }
     };
+
     const loadTheme = () => {
         const savedTheme = localStorage.getItem('freilifts_theme') || 'theme-dark';
         themeSwitcher.value = savedTheme;
         applyTheme(savedTheme);
     };
+
     const switchTab = (tabId) => {
         document.querySelectorAll('.tab-button').forEach(button => button.classList.toggle('active', button.dataset.tab === tabId));
         tabContents.forEach(content => content.classList.toggle('active', content.id === tabId));
@@ -119,11 +128,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tabId === 'tab-my-progress') renderProgressCharts();
         if (tabId === 'tab-about-me') loadAboutMeData();
     };
+
     const loadUserAndInitializeApp = (userId, userName) => {
         currentUserId = userId;
         localStorage.setItem('freilifts_loggedInUser', JSON.stringify({ id: userId, name: userName }));
         userNameDisplay.textContent = `Welcome, ${userName}`;
         showApp();
+        
         ApiService.loadUser(userId).then(snapshot => {
             const userData = snapshot.val() || {};
             const data = userData.data || {};
@@ -133,11 +144,14 @@ document.addEventListener('DOMContentLoaded', () => {
             foodLogs = data.foodLogs || {};
             uniqueFoods = data.uniqueFoods || [];
             userGoals = prefs.goals || {};
+
             const userTheme = prefs.theme || 'theme-dark';
             themeSwitcher.value = userTheme;
             applyTheme(userTheme);
+            
             const hasAboutMeData = !!prefs.about;
             const initialTab = hasAboutMeData ? 'tab-workout-log' : 'tab-about-me';
+
             if (prefs.about) {
                 aboutSex.value = prefs.about.sex || 'male';
                 aboutAge.value = prefs.about.age || '';
@@ -150,6 +164,16 @@ document.addEventListener('DOMContentLoaded', () => {
             switchTab(initialTab);
         });
     };
+    
+    const getAboutMeData = () => ({
+        sex: aboutSex.value,
+        age: aboutAge.value,
+        height: aboutHeight.value,
+        startWeight: aboutStartWeight.value,
+        goalWeight: aboutGoalWeight.value,
+        activityLevel: aboutActivityLevel.value,
+    });
+    
     const populateUniqueFoods = () => {
         const foodMap = new Map();
         (uniqueFoods || []).forEach(food => {
@@ -169,6 +193,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         uniqueFoods = Array.from(foodMap.values());
     };
+
     const renderExercises = () => {
         if (!exerciseListContainer) return;
         exerciseListContainer.innerHTML = '';
@@ -183,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
+
     const handleCsvImport = (file) => {
         if (!file) return;
         const reader = new FileReader();
@@ -205,6 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         reader.readAsText(file);
     };
+
     const renderWorkoutLogView = () => {
         (workouts || []).sort((a, b) => new Date(b.date) - new Date(a.date));
         const todayWorkoutIndex = (workouts || []).findIndex(w => w.date === getTodayDateString());
@@ -240,6 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         renderSummaryView(summaryCategorySelect.value);
     };
+
     const renderWorkoutEntries = (entries) => {
         workoutLogEntries.innerHTML = '';
         if (!entries || entries.length === 0) { workoutLogEntries.innerHTML = '<p>No exercises logged yet.</p>'; return; }
@@ -250,6 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tableHTML += '</table>';
         workoutLogEntries.innerHTML = tableHTML;
     };
+
     const renderSummaryView = (category) => {
         const today = getTodayDateString();
         const lastWorkout = (workouts || []).find(w => w.category === category && w.date !== today);
@@ -263,6 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         workoutSummaryContent.innerHTML = summaryHTML;
     };
+    
     const renderFoodLogView = () => {
         const sortedDates = Object.keys(foodLogs).sort((a, b) => new Date(b) - new Date(a));
         if (!currentFoodLogDate) {
@@ -285,6 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentFoodLogSection.style.display = 'none';
         }
     };
+    
     const renderFoodEntries = (items) => {
         foodLogEntries.innerHTML = '';
         if (!items || items.length === 0) { foodLogEntries.innerHTML = '<p>No food logged for this day yet.</p>'; return; }
@@ -301,6 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
+    
     const calculateAndRenderTotals = (items) => {
         const totals = (items || []).reduce((acc, item) => {
             acc.fat += Number(item.fat);
@@ -321,6 +353,7 @@ document.addEventListener('DOMContentLoaded', () => {
         foodLogTotals.textContent = `Fat: ${totals.fat.toFixed(1)} / ${goalFat.toFixed(0)}g | Carbs: ${totals.carbs.toFixed(1)} / ${goalCarbs.toFixed(0)}g | Protein: ${totals.protein.toFixed(1)} / ${goalProtein.toFixed(0)}g`;
         renderPieChart(totals);
     };
+
     const renderPieChart = (totals) => {
         const canvas = document.getElementById('macro-pie-chart');
         if (!canvas) return;
@@ -340,6 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { color: getComputedStyle(document.body).getPropertyValue('--text-color') } } } }
         });
     };
+    
     const calculateAndRenderPRs = () => {
         const prs = {};
         (workouts || []).forEach(workout => {
@@ -367,6 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
+
     const renderProgressCharts = () => {
         const sortedFoodDates = Object.keys(foodLogs).sort((a, b) => new Date(a) - new Date(b));
         const foodLabels = sortedFoodDates;
@@ -382,6 +417,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderLineChart('protein-chart', proteinChart, foodLabels, proteinData, 'Protein (g)', 'rgba(54, 162, 235, 1)', goalProtein);
         renderLineChart('weight-chart', weightChart, weightLabels, weightData, 'Body Weight (lbs)', 'rgba(75, 192, 192, 1)', goalWeight);
     };
+
     const renderLineChart = (canvasId, chartInstance, labels, data, label, color, goalValue) => {
         const canvas = document.getElementById(canvasId);
         if (!canvas) return;
@@ -406,6 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (canvasId === 'protein-chart') proteinChart = newChartInstance;
         if (canvasId === 'weight-chart') weightChart = newChartInstance;
     };
+    
     const searchUsdaApi = async (query) => {
         usdaSearchResultsContainer.innerHTML = '<p>Searching...</p>';
         const url = `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${USDA_API_KEY}&query=${encodeURIComponent(query)}&pageSize=10`;
@@ -439,6 +476,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("USDA API Fetch Error:", error);
         }
     };
+    
     const loadAboutMeData = () => {
         db.ref(`users/${currentUserId}/preferences/about`).once('value', (snapshot) => {
             const aboutData = snapshot.val();
@@ -537,7 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
     foodSearchResultsContainer.addEventListener('click', (e) => { const resultItem = e.target.closest('.search-result-item'); if (!resultItem) return; const foodName = resultItem.dataset.foodName; if (e.target.matches('.delete')) { e.stopPropagation(); if (confirm(`Are you sure you want to permanently delete "${foodName}" from your saved foods?`)) { uniqueFoods = uniqueFoods.filter(food => food.name !== foodName); saveDataToFirebase(); foodSearchResultsContainer.innerHTML = ''; } } else { const food = uniqueFoods.find(f => f.name === foodName); if (!food) return; const servings = prompt(`'${food.name}'\n\nHow many servings did you have?`, '1'); if (servings === null) return; const numServings = parseFloat(servings) || 1; foodItemNameInput.value = numServings !== 1 ? `${food.name} (${numServings} servings)` : food.name; foodItemFatInput.value = (food.fat * numServings).toFixed(1); foodItemCarbsInput.value = (food.carbs * numServings).toFixed(1); foodItemProteinInput.value = (food.protein * numServings).toFixed(1); foodSearchResultsContainer.innerHTML = ''; } });
     foodItemNameInput.addEventListener('blur', () => { setTimeout(() => { foodSearchResultsContainer.innerHTML = ''; }, 200); });
     myProgressTab.addEventListener('click', (e) => { if (e.target.matches('.reset-zoom-btn')) { const chartId = e.target.dataset.chartId; if (chartId === 'calories-chart' && caloriesChart) { caloriesChart.resetZoom(); } else if (chartId === 'protein-chart' && proteinChart) { proteinChart.resetZoom(); } else if (chartId === 'weight-chart' && weightChart) { weightChart.resetZoom(); } } });
-    document.getElementById('tab-food-log').addEventListener('click', (e) => { const header = e.target.closest('.card-header-with-action'); if (header) { const card = header.closest('.card'); if (card) { const content = card.querySelector('.collapsible-content'); const button = header.querySelector('.collapse-toggle-btn'); if (content && button) { button.classList.toggle('collapsed'); content.classList.toggle('collapsed'); } } } });
+    foodLogTab.addEventListener('click', (e) => { const header = e.target.closest('.card-header-with-action'); if (header) { const card = header.closest('.card'); if (card) { const content = card.querySelector('.collapsible-content'); const button = header.querySelector('.collapse-toggle-btn'); if (content && button) { button.classList.toggle('collapsed'); content.classList.toggle('collapsed'); } } } });
 
     // --- Initialization ---
     const initializeApp = () => {
