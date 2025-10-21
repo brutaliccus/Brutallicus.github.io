@@ -10,20 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
       appId: "1:631799148653:web:bbf030eba362eb7312cf64"
     };
     const USDA_API_KEY = 'aemBTeknGhNmAlKKGpJUiewRCOMdaAVYlAtK91an';
-
-    document.addEventListener('DOMContentLoaded', () => {
-
-    const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-        projectId: "YOUR_PROJECT_ID",
-        databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-        storageBucket: "YOUR_PROJECT_ID.appspot.com",
-        messagingSenderId: "YOUR_SENDER_ID",
-        appId: "YOUR_APP_ID"
-    };
-    const USDA_API_KEY = 'YOUR_USDA_API_KEY_HERE';
-
+    
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
@@ -589,3 +576,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeApp();
 });
+
