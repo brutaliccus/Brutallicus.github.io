@@ -1,19 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyDSb6HjEPLfkcgUA-MKJxyWwkjdCjZHj2k",
-      authDomain: "freilifts-app.firebaseapp.com",
-      databaseURL: "https://freilifts-app-default-rtdb.firebaseio.com",
-      projectId: "freilifts-app",
-      storageBucket: "freilifts-app.firebasestorage.app",
-      messagingSenderId: "631799148653",
-      appId: "1:631799148653:web:bbf030eba362eb7312cf64"
-    };
-    const USDA_API_KEY = 'aemBTeknGhNmAlKKGpJUiewRCOMdaAVYlAtK91an';
-    
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
     // --- App State & Constants ---
     const CATEGORIES = ['Push', 'Pull', 'Legs', 'Other'];
     const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
@@ -114,7 +100,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.className = '';
         document.body.classList.add(themeName);
         localStorage.setItem('freilifts_theme', themeName);
-        if (currentUserId) { db.ref(`users/${currentUserId}/preferences/theme`).set(themeName); }
+        if (currentUserId) {
+            ApiService.saveUserPreferences(currentUserId, { theme: themeName });
+        }
     };
     const loadTheme = () => {
         const savedTheme = localStorage.getItem('freilifts_theme') || 'theme-dark';
@@ -131,17 +119,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tabId === 'tab-my-progress') renderProgressCharts();
         if (tabId === 'tab-about-me') loadAboutMeData();
     };
-    const saveDataToFirebase = () => {
-        if (!currentUserId) return;
-        const userData = { exercises, workouts, foodLogs, uniqueFoods };
-        db.ref('users/' + currentUserId + '/data').set(userData);
-    };
     const loadUserAndInitializeApp = (userId, userName) => {
         currentUserId = userId;
         localStorage.setItem('freilifts_loggedInUser', JSON.stringify({ id: userId, name: userName }));
         userNameDisplay.textContent = `Welcome, ${userName}`;
         showApp();
-        db.ref('users/' + userId).once('value', (snapshot) => {
+        ApiService.loadUser(userId).then(snapshot => {
             const userData = snapshot.val() || {};
             const data = userData.data || {};
             const prefs = userData.preferences || {};
@@ -216,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isDuplicate = (exercises || []).some(ex => ex.name.toLowerCase() === name.toLowerCase());
                 if (name && !isDuplicate) { (exercises || []).push({ id: Date.now() + importedCount, name, category }); importedCount++; }
             });
-            if (importedCount > 0) { saveDataToFirebase(); renderExercises(); }
+            if (importedCount > 0) { ApiService.saveDataForUser(currentUserId, { exercises, workouts, foodLogs, uniqueFoods }); renderExercises(); }
             else { alert('No new exercises were imported.'); }
             csvFileInput.value = '';
         };
@@ -522,7 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn.addEventListener('click', () => { currentUserId = null; localStorage.removeItem('freilifts_loggedInUser'); location.reload(); });
     showRegisterBtn.addEventListener('click', (e) => { e.preventDefault(); loginForm.style.display = 'none'; registerForm.style.display = 'block'; authError.textContent = ''; });
     showLoginBtn.addEventListener('click', (e) => { e.preventDefault(); loginForm.style.display = 'block'; registerForm.style.display = 'none'; authError.textContent = ''; });
-    registerForm.addEventListener('submit', (e) => { e.preventDefault(); authError.textContent = ''; const name = document.getElementById('register-name').value; const pin = document.getElementById('register-pin').value; const userId = sanitizeNameForId(name); if (!userId) { authError.textContent = 'Name cannot be empty.'; return; } if (pin.length < 4) { authError.textContent = 'PIN must be at least 4 characters.'; return; } const userRef = db.ref('users/' + userId); userRef.once('value', (snapshot) => { if (snapshot.exists()) { authError.textContent = 'This name is already taken.'; } else { userRef.set({ name: name, pin: pin }).then(() => { loadUserAndInitializeApp(userId, name); }); } }); });
+    registerForm.addEventListener('submit', (e) => { e.preventDefault(); authError.textContent = ''; const name = document.getElementById('register-name').value; const pin = document.getElementById('register-pin').value; const userId = sanitizeNameForId(name); if (!userId) { authError.textContent = 'Name cannot be empty.'; return; } if (pin.length < 4) { authError.textContent = 'PIN must be at least 4 characters.'; return; } const userRef = db.ref('users/' + userId); userRef.once('value', (snapshot) => { if (snapshot.exists()) { authError.textContent = 'This name is already taken.'; } else { userRef.set({ name: name, pin: pin }).then(() => { const defaultExercisesWithId = DEFAULT_EXERCISES.map((ex, i) => ({...ex, id: Date.now() + i})); const defaultData = { exercises: defaultExercisesWithId, workouts: [], foodLogs: {}, uniqueFoods: [] }; db.ref('users/' + userId + '/data').set(defaultData).then(() => { loadUserAndInitializeApp(userId, name); }); }); } }); });
     loginForm.addEventListener('submit', (e) => { e.preventDefault(); authError.textContent = ''; const name = document.getElementById('login-name').value; const pin = document.getElementById('login-pin').value; const userId = sanitizeNameForId(name); if (!userId) { authError.textContent = 'Please enter your name.'; return; } const userRef = db.ref('users/' + userId); userRef.once('value', (snapshot) => { if (snapshot.exists()) { const userData = snapshot.val(); if (userData.pin === pin) { loadUserAndInitializeApp(userId, userData.name); } else { authError.textContent = 'Incorrect PIN.'; } } else { authError.textContent = 'User not found.'; } }); });
     aboutMeForm.addEventListener('submit', (e) => { e.preventDefault(); const aboutData = { sex: aboutSex.value, age: aboutAge.value, height: aboutHeight.value, startWeight: aboutStartWeight.value, goalWeight: aboutGoalWeight.value, activityLevel: aboutActivityLevel.value, }; db.ref(`users/${currentUserId}/preferences/about`).set(aboutData).then(() => { alert('Your information has been saved!'); calculateAndDisplayCalories(); exitAboutMeEditMode(); }); });
     editAboutMeBtn.addEventListener('click', () => { enterAboutMeEditMode(); });
@@ -576,4 +559,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeApp();
 });
-
