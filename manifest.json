@@ -1,21 +1,23 @@
 {
-    "name": "Freilifts Exercise Log",
-    "short_name": "Freilifts",
-    "description": "A PWA for logging workouts, food, and tracking progress.",
-    "start_url": ".",
-    "display": "standalone",
-    "background_color": "#e9ecef",
-    "theme_color": "#343a40",
-    "icons": [
-        {
-            "src": "icons/icon-192x192.png",
-            "sizes": "192x192",
-            "type": "image/png"
-        },
-        {
-            "src": "icons/icon-512x512.png",
-            "sizes": "512x512",
-            "type": "image/png"
-        }
-    ]
+  "name": "Freilifts",
+  "short_name": "Freilifts",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#1e1e1e",
+  "description": "A Progressive Web App for logging workouts and nutrition.",
+  "icons": [
+    {
+      "src": "images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }

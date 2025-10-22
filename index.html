@@ -10,6 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0/dist/chartjs-plugin-annotation.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1/dist/chartjs-plugin-zoom.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 </head>
 <body>
     <!-- Authentication Screen -->
@@ -25,8 +26,10 @@
                     <label for="login-pin">PIN (4-8 characters)</label>
                     <input type="password" id="login-pin" required minlength="4" maxlength="8">
                 </div>
-                <button type="submit" class="btn-primary">Login</button>
-                <p class="auth-switch">Don't have an account? <button type="button" id="show-register-btn" class="btn-link">Register here</button></p>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Login</button>
+                    <button type="button" id="show-register-btn" class="btn-secondary">Register</button>
+                </div>
             </form>
             <form id="register-form" style="display: none;">
                 <h2>Register for Freilifts</h2>
@@ -38,8 +41,10 @@
                     <label for="register-pin">PIN (4-8 characters)</label>
                     <input type="password" id="register-pin" required minlength="4" maxlength="8">
                 </div>
-                <button type="submit" class="btn-primary">Register</button>
-                <p class="auth-switch">Already have an account? <button type="button" id="show-login-btn" class="btn-link">Login here</button></p>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Register</button>
+                    <button type="button" id="show-login-btn" class="btn-secondary">Login</button>
+                </div>
             </form>
             <p id="auth-error" class="auth-error"></p>
         </div>
@@ -69,6 +74,7 @@
                 <button class="tab-button" data-tab="tab-personal-records">Personal Records</button>
                 <button class="tab-button" data-tab="tab-my-progress">My Progress</button>
                 <button class="tab-button" data-tab="tab-about-me">About Me</button>
+                <button class="tab-button" id="admin-users-tab-btn" data-tab="tab-users" style="display: none;">Users</button>
             </nav>
         </header>
         <main>
@@ -99,7 +105,6 @@
                         <section id="current-workout-section" class="card" style="display: none;">
                             <div class="workout-header">
                                 <button id="prev-workout-btn" class="nav-arrow" title="Previous Workout">&#9664;</button>
-
                                 <div class="workout-title-group">
                                     <h3 id="workout-title"></h3>
                                     <div id="bodyweight-display-container" class="bodyweight-display">
@@ -108,7 +113,6 @@
                                         <button id="edit-bodyweight-btn" class="icon-btn edit" title="Edit Body Weight">&#9998;</button>
                                     </div>
                                 </div>
-
                                 <div class="workout-header-actions">
                                     <button id="edit-workout-btn" class="icon-btn edit" title="Edit Workout">&#9998;</button>
                                     <button id="delete-workout-btn" class="icon-btn delete" title="Delete this workout">&#128465;</button>
@@ -169,12 +173,7 @@
                         </div>
                         <div class="form-group">
                             <label for="new-exercise-category">Category:</label>
-                            <select id="new-exercise-category">
-                                <option value="Push">Push</option>
-                                <option value="Pull">Pull</option>
-                                <option value="Legs">Legs</option>
-                                <option value="Other">Other</option>
-                            </select>
+                            <select id="new-exercise-category"></select>
                         </div>
                         <div class="form-actions">
                             <button type="submit" class="btn-primary">Add Exercise</button>
@@ -205,23 +204,21 @@
                 <section id="current-food-log-section" class="card" style="display: none;">
                     <div class="workout-header">
                         <button id="prev-food-log-btn" class="nav-arrow" title="Previous Day">&#9664;</button>
-                        
                         <div class="workout-title-group">
                             <h3 id="food-log-title"></h3>
                         </div>
-
                         <div class="workout-header-actions">
                             <button id="edit-food-log-btn" class="icon-btn edit" title="Edit Day's Log">&#9998;</button>
                             <button id="delete-food-log-btn" class="icon-btn delete" title="Delete Day's Log">&#128465;</button>
                             <button id="next-food-log-btn" class="nav-arrow" title="Next Day">&#9654;</button>
                         </div>
                     </div>
-                    
                     <form id="add-food-item-form">
                         <div class="log-inputs">
-                            <div class="form-group" style="flex-grow: 2; position: relative;">
-                                <label for="food-item-name">Search or Add Food</label>
-                                <input type="text" id="food-item-name" placeholder="e.g., Chicken Breast" required autocomplete="off">
+                            <div class="form-group input-with-icon" style="flex-grow: 2;">
+                                <label for="food-item-name">Search, Enter UPC, or Scan</label>
+                                <input type="text" id="food-item-name" placeholder="e.g., Chicken Breast or barcode" required autocomplete="off">
+                                <button type="button" id="scan-barcode-btn" class="icon-btn" title="Scan Barcode"></button>
                                 <div id="food-search-results-container"></div>
                             </div>
                             <div class="form-group">
@@ -234,7 +231,6 @@
                                 </select>
                             </div>
                         </div>
-
                         <div id="food-macro-details" class="log-inputs">
                              <div class="form-group">
                                 <label for="food-item-quantity">Quantity</label>
@@ -259,7 +255,6 @@
                         </div>
                         <button type="submit" class="btn-primary">Add Food</button>
                     </form>
-                    
                     <div class="food-log-display-layout">
                         <div id="food-log-entries"></div>
                         <div class="totals-display">
@@ -276,13 +271,11 @@
                     </div>
                 </section>
             </div>
-            <!-- Tab 4: Personal Records -->
             <div id="tab-personal-records" class="tab-content">
                 <h2>Personal Records</h2>
                 <p>This table shows the heaviest weight logged for each exercise.</p>
                 <div id="pr-container" class="pr-layout"></div>
             </div>
-            <!-- Tab 5: My Progress -->
             <div id="tab-my-progress" class="tab-content">
                 <h2>My Progress</h2>
                 <p>Use your mouse wheel to zoom and click-and-drag to pan the charts.</p>
@@ -310,7 +303,6 @@
                     </div>
                 </div>
             </div>
-            <!-- Tab 6: About Me -->
             <div id="tab-about-me" class="tab-content">
                 <h2>About Me</h2>
                 <div class="about-me-layout">
@@ -339,7 +331,7 @@
                             </div>
                             <div class="form-row">
                                 <div class="form-group">
-                                    <label for="about-start-weight">Starting Weight (lbs)</label>
+                                    <label for="about-start-weight">Current Weight (lbs)</label>
                                     <input type="number" id="about-start-weight" step="0.1" placeholder="e.g., 195.0" required>
                                 </div>
                                 <div class="form-group">
@@ -363,6 +355,13 @@
                         </form>
                     </section>
                     <section class="card">
+                        <h3>Advanced Options</h3>
+                        <p>If you've taken a break and your current weight is higher than past entries, your calorie goals may be too low. Resetting will make the app ignore all past bodyweight entries for goal calculations.</p>
+                        <div class="form-actions">
+                            <button type="button" id="reset-weight-history-btn" class="btn-secondary">Reset Weight History</button>
+                        </div>
+                    </section>
+                    <section class="card">
                         <h3>Calorie & Macro Goals</h3>
                         <div id="calorie-results-container">
                             <p>Fill out and save your information to calculate your goals.</p>
@@ -370,14 +369,36 @@
                     </section>
                 </div>
             </div>
+            <div id="tab-users" class="tab-content">
+                <h2>User Management</h2>
+                <div class="card">
+                    <h3>All Users</h3>
+                    <div id="user-list-container">
+                        <p>Loading user data...</p>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
-    <script>
-        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('/service-worker.js').then(reg => console.log('SW registered.')).catch(err => console.log('SW registration failed: ', err)); }); }
-    </script>
+    <div id="scanner-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="barcode-reader"></div>
+            <button id="scanner-close-btn" class="btn-secondary">Close</button>
+        </div>
+    </div>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
     <script src="predefined-exercises.js"></script>
-    <script src="app.js"></script>
+    
+    <script src="js/app.js" defer></script>
+    
+    <script src="js/modules/workout.js" defer></script>
+    <script src="js/modules/exercises.js" defer></script>
+    <script src="js/modules/food.js" defer></script>
+    <script src="js/modules/profile.js" defer></script>
+    <script src="js/modules/progress.js" defer></script>
+    <script src="js/modules/userAdmin.js" defer></script>
 </body>
 </html>

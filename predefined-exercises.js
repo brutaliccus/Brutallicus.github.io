@@ -1,5 +1,3 @@
-// predefined-exercises.js
-
 const PREDEFINED_EXERCISES = [
     // --- PUSH ---
     // Chest
@@ -10,11 +8,10 @@ const PREDEFINED_EXERCISES = [
     { name: 'Decline Barbell Press', category: 'Push' },
     { name: 'Machine Chest Press', category: 'Push' },
     { name: 'Machine Fly', category: 'Push' },
-    { name: 'Dumbbell Fly', category  : 'Push' },
+    { name: 'Dumbbell Fly', category: 'Push' },
     { name: 'Cable Crossover', category: 'Push' },
     { name: 'Push-up', category: 'Push' },
     { name: 'Dip', category: 'Push' },
-
     // Shoulders
     { name: 'Overhead Press (Barbell)', category: 'Push' },
     { name: 'Seated Dumbbell Press', category: 'Push' },
@@ -24,7 +21,6 @@ const PREDEFINED_EXERCISES = [
     { name: 'Cable Lateral Raise', category: 'Push' },
     { name: 'Dumbbell Front Raise', category: 'Push' },
     { name: 'Plate Front Raise', category: 'Push' },
-
     // Triceps
     { name: 'Triceps Pushdown (Cable)', category: 'Push' },
     { name: 'Overhead Triceps Extension (Cable)', category: 'Push' },
@@ -33,7 +29,6 @@ const PREDEFINED_EXERCISES = [
     { name: 'Close-Grip Bench Press', category: 'Push' },
     { name: 'Triceps Dip', category: 'Push' },
     { name: 'Dumbbell Kickback', category: 'Push' },
-
     // --- PULL ---
     // Back
     { name: 'Deadlift (Conventional)', category: 'Pull' },
@@ -48,7 +43,6 @@ const PREDEFINED_EXERCISES = [
     { name: 'Good Morning', category: 'Pull' },
     { name: 'Face Pull', category: 'Pull' },
     { name: 'Back Extension', category: 'Pull' },
-
     // Biceps
     { name: 'Barbell Curl', category: 'Pull' },
     { name: 'Dumbbell Curl', category: 'Pull' },
@@ -56,7 +50,6 @@ const PREDEFINED_EXERCISES = [
     { name: 'Preacher Curl', category: 'Pull' },
     { name: 'Cable Curl', category: 'Pull' },
     { name: 'Concentration Curl', category: 'Pull' },
-
     // --- LEGS ---
     // Quads, Glutes, Compound
     { name: 'Barbell Back Squat', category: 'Legs' },
@@ -68,17 +61,14 @@ const PREDEFINED_EXERCISES = [
     { name: 'Bulgarian Split Squat', category: 'Legs' },
     { name: 'Hip Thrust (Barbell)', category: 'Legs' },
     { name: 'Leg Extension', category: 'Legs' },
-    
     // Hamstrings
     { name: 'Romanian Deadlift (Barbell)', category: 'Legs' },
     { name: 'Romanian Deadlift (Dumbbell)', category: 'Legs' },
     { name: 'Lying Leg Curl', category: 'Legs' },
     { name: 'Seated Leg Curl', category: 'Legs' },
-
     // Calves
     { name: 'Standing Calf Raise', category: 'Legs' },
     { name: 'Seated Calf Raise', category: 'Legs' },
-
     // --- OTHER ---
     // Core
     { name: 'Plank', category: 'Other' },

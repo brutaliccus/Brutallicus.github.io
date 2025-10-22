@@ -1,18 +1,19 @@
-const CACHE_NAME = 'freilifts-v2'; // Updated cache version
+const CACHE_NAME = 'freilifts-cache-v1';
 const URLS_TO_CACHE = [
     '/',
-    '/index.html',
-    '/style.css',
-    '/app.js',
-    '/manifest.json',
-    'https://cdn.jsdelivr.net/npm/chart.js', // Cache the chart library
-    'https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js',
-    'https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js',
-    '/icons/icon-192x192.png',
-    '/icons/icon-512x512.png'
+    'index.html',
+    'style.css',
+    'predefined-exercises.js',
+    'js/app.js',
+    'js/modules/workout.js',
+    'js/modules/exercises.js',
+    'js/modules/food.js',
+    'js/modules/profile.js',
+    'js/modules/progress.js',
+    'js/modules/userAdmin.js'
 ];
 
-// Install event: cache the app shell
+// Install the service worker and cache all the app's assets
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -23,7 +24,23 @@ self.addEventListener('install', event => {
     );
 });
 
-// Activate event: clean up old caches
+// Intercept fetch requests and serve from cache first
+self.addEventListener('fetch', event => {
+    event.respondWith(
+        caches.match(event.request)
+            .then(response => {
+                // Cache hit - return response
+                if (response) {
+                    return response;
+                }
+                // Not in cache - fetch from network
+                return fetch(event.request);
+            }
+        )
+    );
+});
+
+// Clean up old caches when a new service worker activates
 self.addEventListener('activate', event => {
     const cacheWhitelist = [CACHE_NAME];
     event.waitUntil(
@@ -36,20 +53,5 @@ self.addEventListener('activate', event => {
                 })
             );
         })
-    );
-});
-
-// Fetch event: serve from cache first, then network
-self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                // Cache hit - return response
-                if (response) {
-                    return response;
-                }
-                // Not in cache - go to network
-                return fetch(event.request);
-            })
     );
 });
