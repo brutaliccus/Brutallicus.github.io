@@ -4,15 +4,15 @@ const URLS_TO_CACHE = [
     'index.html',
     'style.css',
     'predefined-exercises.js',
-    'app.js',
-    'workout.js',
-    'exercises.js',
-    'food.js',
-    'profile.js',
-    'progress.js',
-    'userAdmin.js',
-    'images/icon-192x192.png',
-    'images/icon-512x512.png'
+    'js/app.js',
+    'js/modules/workout.js',
+    'js/modules/exercises.js',
+    'js/modules/food.js',
+    'js/modules/profile.js',
+    'js/modules/progress.js',
+    'js/modules/userAdmin.js',
+    'icons/images/icon-192x192.png',
+    'icons/images/icon-512x512.png'
 ];
 
 // --- INSTALL: Cache the application shell ---
@@ -58,3 +58,4 @@ self.addEventListener('activate', event => {
         })
     );
 });
+
