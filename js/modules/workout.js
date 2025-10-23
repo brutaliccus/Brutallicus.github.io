@@ -31,38 +31,43 @@ function createWorkoutModule() {
     let editingEntryId = null;
 
     function renderWorkoutLogView() {
-        getState().workouts.sort((a, b) => new Date(b.date) - new Date(a.date));
-        if (currentWorkoutIndex === -1 && getState().workouts.length > 0) {
-            currentWorkoutIndex = 0;
-        }
-
-        if (currentWorkoutIndex !== -1 && getState().workouts[currentWorkoutIndex]) {
-            currentWorkoutSection.style.display = 'block';
-            const workout = getState().workouts[currentWorkoutIndex];
-            workoutTitle.textContent = `${workout.date} (${workout.category})`;
-
-            if (workout.bodyweight && workout.bodyweight > 0) {
-                bodyweightValue.textContent = workout.bodyweight;
-                bodyweightDisplayContainer.style.display = 'block';
-            } else {
-                bodyweightDisplayContainer.style.display = 'none';
-            }
-
-            const isFinished = workout.isFinished || false;
-            addLogEntryForm.style.display = isFinished ? 'none' : 'block';
-            workoutControls.style.display = 'block';
-            finishWorkoutBtn.style.display = !isFinished ? 'inline-block' : 'none';
-            editWorkoutBtn.style.display = isFinished ? 'inline-block' : 'none';
-            prevWorkoutBtn.disabled = currentWorkoutIndex >= getState().workouts.length - 1;
-            nextWorkoutBtn.disabled = currentWorkoutIndex <= 0;
-            
-            renderWorkoutEntries(workout.exercises);
-        } else {
-            currentWorkoutSection.style.display = 'none';
-        }
-        workoutDateInput.value = getTodayDateString();
-        renderSummaryView(summaryCategorySelect.value);
+    getState().workouts.sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (currentWorkoutIndex === -1 && getState().workouts.length > 0) {
+        currentWorkoutIndex = 0;
     }
+
+    if (currentWorkoutIndex !== -1 && getState().workouts[currentWorkoutIndex]) {
+        currentWorkoutSection.style.display = 'block';
+        const workout = getState().workouts[currentWorkoutIndex];
+        workoutTitle.textContent = `${workout.date} (${workout.category})`;
+
+        if (workout.bodyweight && workout.bodyweight > 0) {
+            bodyweightValue.textContent = workout.bodyweight;
+            bodyweightDisplayContainer.style.display = 'block';
+        } else {
+            bodyweightDisplayContainer.style.display = 'none';
+        }
+
+        const isFinished = workout.isFinished || false;
+
+        // <<< THIS IS THE NEW LINE >>>
+        // Toggle a class on the parent container based on the workout's status.
+        currentWorkoutSection.classList.toggle('is-finished', isFinished);
+
+        addLogEntryForm.style.display = isFinished ? 'none' : 'block';
+        workoutControls.style.display = 'block';
+        finishWorkoutBtn.style.display = !isFinished ? 'inline-block' : 'none';
+        editWorkoutBtn.style.display = isFinished ? 'inline-block' : 'none';
+        prevWorkoutBtn.disabled = currentWorkoutIndex >= getState().workouts.length - 1;
+        nextWorkoutBtn.disabled = currentWorkoutIndex <= 0;
+        
+        renderWorkoutEntries(workout.exercises);
+    } else {
+        currentWorkoutSection.style.display = 'none';
+    }
+    workoutDateInput.value = getTodayDateString();
+    renderSummaryView(summaryCategorySelect.value);
+}
     
     function renderWorkoutEntries(entries) {
         workoutLogEntries.innerHTML = '';
@@ -274,4 +279,5 @@ function createWorkoutModule() {
         init,
         render: renderWorkoutLogView
     };
+
 }
