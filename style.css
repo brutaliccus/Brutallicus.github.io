@@ -192,15 +192,12 @@ button {
 .card-header-with-action h3 {
     margin-bottom: 0;
 }
-
-/* --- Workout Log Tab Styles --- */
 .workout-log-layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 1.5rem;
     align-items: flex-start;
 }
-@media (max-width: 900px) { .workout-log-layout { grid-template-columns: 1fr; } }
 .workout-header h3 { text-align: center; margin: 0; }
 .nav-arrow {
     background: none;
@@ -257,8 +254,6 @@ button {
 .log-table th, .log-table td { text-align: left; padding: 0.75rem; border-bottom: 1px solid var(--border-color); }
 .log-table th { color: var(--secondary-color); font-size: 0.9em; }
 .workout-controls { margin-top: 1.5rem; text-align: right; }
-
-/* --- Food Log Specific Styles --- */
 .food-log-display-layout {
     display: grid;
     grid-template-columns: 1.5fr 1fr;
@@ -280,11 +275,6 @@ button {
     max-width: 300px;
     margin: auto;
 }
-@media (max-width: 900px) {
-    .food-log-display-layout { grid-template-columns: 1fr; }
-    .totals-display { position: static; }
-}
-/* --- Personal Records Tab Styles --- */
 .pr-layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -292,9 +282,6 @@ button {
     align-items: flex-start;
 }
 .pr-layout .card { width: 100%; box-sizing: border-box; }
-@media (max-width: 768px) { .pr-layout { grid-template-columns: 1fr; } }
-
-/* --- My Progress Tab Styles --- */
 .progress-charts-layout {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -319,8 +306,6 @@ button {
     color: var(--text-color-light);
 }
 .reset-zoom-btn:hover { opacity: 1; }
-
-/* --- About Me Tab Styles --- */
 .about-me-layout {
     display: grid;
     grid-template-columns: 1.5fr 1fr;
@@ -335,9 +320,6 @@ button {
 }
 #calorie-results-container p { font-size: 1.1rem; line-height: 1.6; }
 #calorie-results-container strong { font-size: 1.2rem; color: var(--primary-color); }
-@media (max-width: 900px) { .about-me-layout { grid-template-columns: 1fr; } }
-
-/* Manage Exercises List Styles */
 #exercise-list-layout {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -347,8 +329,6 @@ button {
 .exercise-category-card .exercise-item { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; }
 .exercise-category-card .exercise-item:not(:last-child) { border-bottom: 1px solid var(--border-color); }
 .exercise-item .actions { display: flex; gap: 0.5rem; }
-
-/* --- Additions for Food Search UX --- */
 .search-results-header {
     padding: 0.5rem 0.75rem 0.25rem;
     margin: 0;
@@ -374,8 +354,6 @@ button {
     margin-top: 1rem;
     display: none;
 }
-
-/* --- Additions for In-Line Workout Editing --- */
 .log-table tr.edit-mode { background-color: color-mix(in srgb, var(--primary-color) 10%, var(--card-background)); }
 .log-table input[type="number"],
 .log-table input[type="text"] {
@@ -390,18 +368,18 @@ button {
 .log-table .actions-cell .icon-btn { font-size: 1.5rem; }
 .log-table .icon-btn.save:hover { color: #2a9d8f; }
 .log-table .icon-btn.cancel:hover { color: var(--danger-color); }
-
-/* --- Additions for Create Workout Form Layout --- */
 .form-inline-group {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
     align-items: flex-end;
 }
-.form-inline-group .form-group { margin-bottom: 0; flex-grow: 1; flex-basis: 200px; }
+.form-inline-group .form-group {
+    margin-bottom: 0;
+    flex-grow: 1;
+    flex-basis: 200px;
+}
 .form-inline-group button { flex-shrink: 0; }
-
-/* --- Workout Header Alignment --- */
 .workout-header {
     display: flex;
     justify-content: space-between;
@@ -412,9 +390,11 @@ button {
 .workout-header-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
 .bodyweight-display { padding: 0.5rem 0 0 0; margin-bottom: 0; font-size: 1rem; color: var(--secondary-color); }
 .workout-header .nav-arrow { width: auto; flex-shrink: 0; }
-.log-table .actions-cell { width: 1%; white-space: nowrap; text-align: right; }
-
-/* --- Macro and Calorie Goal Color Coding --- */
+.log-table .actions-cell {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
 .totals-display .macro-value { padding: 0 0.25em; display: inline-block; }
 .totals-display .macro-red, .totals-display .macro-green, .totals-display .macro-yellow, .totals-display .macro-default { font-weight: bold; }
 .totals-display .macro-red { color: var(--danger-color); }
@@ -422,8 +402,6 @@ button {
 .totals-display .macro-yellow { color: var(--warning-color); }
 .totals-display .macro-default { color: var(--text-color); }
 #calorie-goal-progress { font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem; }
-
-/* --- Admin User List Styles --- */
 .status-indicator {
     display: inline-block;
     width: 12px;
@@ -434,8 +412,6 @@ button {
 .status-indicator.online { background-color: var(--success-color); }
 .status-indicator.offline { background-color: var(--secondary-color); }
 .icon-btn.reset-pin:hover { color: var(--primary-color); }
-
-/* --- Barcode Scanner Styles --- */
 .input-with-icon { position: relative; }
 #food-item-name { padding-right: 50px; }
 #scan-barcode-btn {
@@ -455,7 +431,6 @@ button {
     -webkit-mask-size: 75%;
     mask-size: 75%;
     -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
     -webkit-mask-position: center;
     mask-position: center;
 }
@@ -485,39 +460,28 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
     width: 100%;
     border: 1px solid var(--border-color);
     margin-bottom: 1rem;
-
 }
 #current-workout-section.is-finished .log-table .actions-cell {
     display: none;
 }
 
+
 /* --- MOBILE RESPONSIVE STYLES --- */
 @media (max-width: 768px) {
-    /* 
-     * Base font size set to 12px for a ~75% scale on mobile.
-    */
     html {
         font-size: 12px;
     }
-
-    /* Make the main header title smaller */
     h1 {
         font-size: 1.8rem;
         margin-top: 2.5rem;
     }
-
-    /* Add a stronger bottom border to the header for clear separation */
     header {
         border-bottom: 2px solid var(--border-color);
     }
-    
-    /* Make the borders of all cards thicker to give them more presence */
     .card {
         padding: 1rem;
         border-width: 2px;
     }
-
-    /* Make form elements more compact but readable */
     input[type="text"], 
     select, 
     input[type="date"], 
@@ -527,8 +491,6 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
         padding: 0.8rem;
         font-size: 1.1rem;
     }
-
-    /* Make tab buttons a little smaller */
     .tab-button {
         padding: 0.4rem 0.8rem;
         font-size: 0.85rem;
@@ -540,28 +502,25 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
     .form-row {
         flex-direction: column;
         align-items: stretch;
-        /* <<< THIS IS THE FIX: We remove the 'gap' property >>> */
-        /* The 'margin-bottom' on .form-group will now handle the spacing correctly. */
     }
 
-    /* Force other major layouts to stack vertically */
+    /* --- THE DEFINITIVE FIX for stacked form group height --- */
+    .form-inline-group .form-group {
+        flex-grow: 0;   /* Prevent item from growing */
+        flex-basis: auto; /* CRITICAL: Let height be determined by content, not the 200px desktop basis */
+    }
+
     .about-me-layout,
     .pr-layout,
     .workout-log-layout,
     .food-log-display-layout {
         grid-template-columns: 1fr;
     }
-
-    /* Make the pie chart smaller to fit */
     .chart-container {
         max-width: 250px;
     }
-
-    /* Ensure search results don't cause horizontal overflow */
     #food-item-name {
         width: 100%;
         box-sizing: border-box;
     }
 }
-
-
