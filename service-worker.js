@@ -11,8 +11,8 @@ const URLS_TO_CACHE = [
     'js/modules/profile.js',
     'js/modules/progress.js',
     'js/modules/userAdmin.js',
-    'icons/images/icon-192x192.png',
-    'icons/images/icon-512x512.png'
+    'icons/icon-192x192.png',
+    'icons/icon-512x512.png'
 ];
 
 // --- INSTALL: Cache the application shell ---
@@ -58,4 +58,5 @@ self.addEventListener('activate', event => {
         })
     );
 });
+
 
