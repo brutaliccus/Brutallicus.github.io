@@ -468,20 +468,31 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
 
 /* --- MOBILE RESPONSIVE STYLES --- */
 @media (max-width: 768px) {
+    /* 
+     * Base font size set to 12px for a ~75% scale on mobile.
+    */
     html {
         font-size: 12px;
     }
+
+    /* Make the main header title smaller */
     h1 {
         font-size: 1.8rem;
         margin-top: 2.5rem;
     }
+
+    /* Add a stronger bottom border to the header for clear separation */
     header {
         border-bottom: 2px solid var(--border-color);
     }
+    
+    /* Make the borders of all cards thicker to give them more presence */
     .card {
         padding: 1rem;
         border-width: 2px;
     }
+
+    /* Make form elements more compact but readable */
     input[type="text"], 
     select, 
     input[type="date"], 
@@ -491,6 +502,8 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
         padding: 0.8rem;
         font-size: 1.1rem;
     }
+
+    /* Make tab buttons a little smaller */
     .tab-button {
         padding: 0.4rem 0.8rem;
         font-size: 0.85rem;
@@ -503,24 +516,91 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
         flex-direction: column;
         align-items: stretch;
     }
-
-    /* --- THE DEFINITIVE FIX for stacked form group height --- */
-    .form-inline-group .form-group {
-        flex-grow: 0;   /* Prevent item from growing */
-        flex-basis: auto; /* CRITICAL: Let height be determined by content, not the 200px desktop basis */
+    
+    /* Reset flex-basis on stacked form groups to fix height issue */
+    .form-inline-group .form-group,
+    .form-row .form-group {
+        flex-grow: 0;
+        flex-basis: auto;
     }
 
+    /* Force all major multi-column layouts to stack into a single column */
     .about-me-layout,
     .pr-layout,
     .workout-log-layout,
-    .food-log-display-layout {
+    .progress-charts-layout {
         grid-template-columns: 1fr;
     }
+
+    /* --- NEW: Re-order the Food Log Layout --- */
+    .food-log-display-layout {
+        display: flex;
+        flex-direction: column;
+    }
+    .totals-display {
+        order: 1; /* This makes the totals appear first */
+        position: static; /* Ensure it doesn't stick to the top */
+    }
+    #food-log-entries {
+        order: 2; /* This makes the food list appear second */
+    }
+    /* --- End of New Rules --- */
+
+    /* Make the pie chart smaller to fit */
     .chart-container {
         max-width: 250px;
     }
-    #food-item-name {
-        width: 100%;
-        box-sizing: border-box;
+    
+    /* Responsive Food Log Table-to-Card transformation */
+    .food-log-table {
+        border: none;
+    }
+    .food-log-table thead {
+        display: none;
+    }
+    .food-log-table tr {
+        display: block;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        position: relative;
+    }
+    .food-log-table td {
+        display: block;
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+        border: none;
+    }
+    .food-log-table td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        text-align: left;
+        font-weight: bold;
+        color: var(--secondary-color);
+    }
+    .food-log-table td:first-child {
+        text-align: left;
+        padding-left: 0;
+        font-size: 1.1rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    .food-log-table td:first-child::before {
+        display: none;
+    }
+    .food-log-table .actions-cell {
+        position: absolute;
+        top: 0.25rem;
+        right: 0.25rem;
+        padding: 0;
+    }
+    .food-log-table .actions-cell::before {
+        display: none;
     }
 }
