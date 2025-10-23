@@ -1,6 +1,5 @@
 function createProfileModule() {
-    let db, getState, saveDataToFirebase, calculateCurrentGoals;
-
+    let db, getState, saveDataToFirebase, calculateCurrentGoals, formatDate;
     const prContainer = document.getElementById('pr-container');
     const aboutMeForm = document.getElementById('about-me-form');
     const aboutSex = document.getElementById('about-sex');
@@ -13,9 +12,7 @@ function createProfileModule() {
     const saveAboutMeBtn = document.getElementById('save-about-me-btn');
     const editAboutMeBtn = document.getElementById('edit-about-me-btn');
     const resetWeightHistoryBtn = document.getElementById('reset-weight-history-btn');
-
     const CATEGORIES = ['Push', 'Pull', 'Legs', 'Other'];
-
     function calculateAndRenderPRs() {
         const prs = {};
         getState().workouts.forEach(workout => {
@@ -50,7 +47,6 @@ function createProfileModule() {
             }
         });
     }
-
     function calculateAndDisplayCalories() {
         const { goals, weightUsed, maintenance } = calculateCurrentGoals();
         let goalType = "Maintain Weight";
@@ -72,19 +68,16 @@ function createProfileModule() {
             <p>Fat: <strong>${goals.fat.toFixed(0)}g</strong></p>
             <p>Carbs: <strong>${goals.carbs.toFixed(0)}g</strong></p>`;
     }
-
     function enterAboutMeEditMode() {
         aboutMeForm.querySelectorAll('input, select').forEach(el => el.disabled = false);
         saveAboutMeBtn.style.display = 'inline-block';
         editAboutMeBtn.style.display = 'none';
     }
-
     function exitAboutMeEditMode() {
         aboutMeForm.querySelectorAll('input, select').forEach(el => el.disabled = true);
         saveAboutMeBtn.style.display = 'none';
         editAboutMeBtn.style.display = 'inline-block';
     }
-    
     function loadAboutMeData() {
         const aboutData = getState().about;
         if (aboutData && aboutData.age) {
@@ -100,7 +93,6 @@ function createProfileModule() {
             enterAboutMeEditMode();
         }
     }
-
     function bindEvents() {
         resetWeightHistoryBtn.addEventListener('click', () => {
             if (confirm("Are you sure? This will make the app ignore all past bodyweight entries for goal calculations. Your current 'About Me' weight will become the new baseline.")) {
@@ -117,7 +109,6 @@ function createProfileModule() {
                     });
             }
         });
-
         aboutMeForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const aboutData = {
@@ -133,7 +124,6 @@ function createProfileModule() {
                 });
             });
         });
-
         editAboutMeBtn.addEventListener('click', enterAboutMeEditMode);
         aboutMeForm.addEventListener('input', () => {
             if (saveAboutMeBtn.style.display === 'inline-block') {
@@ -145,15 +135,14 @@ function createProfileModule() {
             }
         });
     }
-
     function init(api) {
         db = api.db;
         getState = api.getState;
         saveDataToFirebase = api.saveDataToFirebase;
         calculateCurrentGoals = api.calculateCurrentGoals;
+        formatDate = api.formatDate;
         bindEvents();
     }
-
     return {
         init,
         renderPRs: calculateAndRenderPRs,
