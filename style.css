@@ -485,4 +485,54 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
     width: 100%;
     border: 1px solid var(--border-color);
     margin-bottom: 1rem;
+
+}
+@media (max-width: 768px) {
+    /* 
+     * The single most impactful change: reduce the root font size.
+     * The default is 16px. We're setting it to 14px, which is about an 87.5% scale.
+     * Since most of our units are 'rem', many elements will scale down automatically.
+     * We can adjust this value if things are still too big or become too small.
+    */
+    html {
+        font-size: 14px;
+    }
+
+    /* Make the main header title smaller */
+    h1 {
+        font-size: 1.8rem;
+        margin-top: 2.5rem; /* Give a bit more space since header controls are on top */
+    }
+
+    /* Reduce padding inside cards to save space */
+    .card {
+        padding: 1rem;
+    }
+
+    /* Make form elements more compact */
+    input[type="text"], 
+    select, 
+    input[type="date"], 
+    input[type="password"], 
+    input[type="number"],
+    button {
+        padding: 0.6rem;
+        font-size: 1rem;
+    }
+
+    /* Make tab buttons a little smaller */
+    .tab-button {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+    }
+
+    /* Force layouts to stack vertically */
+    .about-me-layout {
+        grid-template-columns: 1fr;
+    }
+
+    /* Make the pie chart smaller to fit */
+    .chart-container {
+        max-width: 250px;
+    }
 }
