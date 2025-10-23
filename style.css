@@ -506,7 +506,6 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
         margin-top: 2.5rem;
     }
 
-    /* --- NEW: Borders and Definition --- */
     /* Add a stronger bottom border to the header for clear separation */
     header {
         border-bottom: 2px solid var(--border-color);
@@ -517,8 +516,6 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
         padding: 1rem;
         border-width: 2px;
     }
-    /* --- End of New Rules --- */
-
 
     /* Make form elements more compact but readable */
     input[type="text"], 
@@ -543,7 +540,8 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
     .form-row {
         flex-direction: column;
         align-items: stretch;
-        gap: 1rem;
+        /* <<< THIS IS THE FIX: We remove the 'gap' property >>> */
+        /* The 'margin-bottom' on .form-group will now handle the spacing correctly. */
     }
 
     /* Force other major layouts to stack vertically */
@@ -565,4 +563,5 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
         box-sizing: border-box;
     }
 }
+
 
