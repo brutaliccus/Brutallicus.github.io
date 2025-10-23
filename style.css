@@ -489,10 +489,8 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
 }
 @media (max-width: 768px) {
     /* 
-     * The single most impactful change: reduce the root font size.
-     * The default is 16px. We're setting it to 14px, which is about an 87.5% scale.
-     * Since most of our units are 'rem', many elements will scale down automatically.
-     * We can adjust this value if things are still too big or become too small.
+     * Base font size set to 12px for a ~75% scale on mobile.
+     * Most rem-based units will scale down automatically with this change.
     */
     html {
         font-size: 12px;
@@ -501,7 +499,7 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
     /* Make the main header title smaller */
     h1 {
         font-size: 1.8rem;
-        margin-top: 2.5rem; /* Give a bit more space since header controls are on top */
+        margin-top: 2.5rem;
     }
 
     /* Reduce padding inside cards to save space */
@@ -516,8 +514,8 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
     input[type="password"], 
     input[type="number"],
     button {
-        padding: 0.6rem;
-        font-size: 1rem;
+        padding: 0.8rem; /* Increased padding slightly for better touch targets */
+        font-size: 1.1rem; /* Make font in inputs a bit bigger for readability */
     }
 
     /* Make tab buttons a little smaller */
@@ -526,8 +524,21 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
         font-size: 0.85rem;
     }
 
-    /* Force layouts to stack vertically */
-    .about-me-layout {
+    /* --- NEW LAYOUT RULES --- */
+    /* Target all horizontal form groups and stack them vertically */
+    .log-inputs,
+    .form-inline-group,
+    .form-row {
+        flex-direction: column;
+        align-items: stretch; /* Make all inputs full-width */
+        gap: 1rem; /* Add vertical space between stacked inputs */
+    }
+
+    /* Force other major layouts to stack vertically */
+    .about-me-layout,
+    .pr-layout,
+    .workout-log-layout,
+    .food-log-display-layout {
         grid-template-columns: 1fr;
     }
 
@@ -535,5 +546,12 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
     .chart-container {
         max-width: 250px;
     }
+
+    /* Ensure search results don't cause horizontal overflow */
+    #food-item-name {
+        width: 100%;
+        box-sizing: border-box; /* Include padding and border in the element's total width */
+    }
 }
+
 
