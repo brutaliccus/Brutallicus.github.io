@@ -487,6 +487,10 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
     margin-bottom: 1rem;
 
 }
+#current-workout-section.is-finished .log-table .actions-cell {
+    display: none;
+}
+
 /* --- MOBILE RESPONSIVE STYLES --- */
 @media (max-width: 768px) {
     /* 
@@ -561,3 +565,4 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
         box-sizing: border-box;
     }
 }
+
