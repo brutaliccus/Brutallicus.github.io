@@ -171,27 +171,38 @@ function createFoodModule() {
     }
     
     function renderFoodEntries(items) {
-        foodLogEntries.innerHTML = '';
-        if (!items || items.length === 0) {
-            foodLogEntries.innerHTML = '<p>No food logged for this day yet.</p>';
-            return;
-        }
-        const groupedByMeal = items.reduce((acc, item) => {
-            (acc[item.meal] = acc[item.meal] || []).push(item);
-            return acc;
-        }, {});
-
-        MEALS.forEach(meal => {
-            if (groupedByMeal[meal]?.length > 0) {
-                let mealHTML = `<h4>${meal}</h4><table class="log-table"><tr><th>Food</th><th>Fat</th><th>Carbs</th><th>Protein</th><th>Cals</th><th>Actions</th></tr>`;
-                groupedByMeal[meal].forEach(item => {
-                    mealHTML += `<tr data-entry-id="${item.id}"><td>${item.name}</td><td>${item.fat}</td><td>${item.carbs}</td><td>${item.protein}</td><td>${item.calories.toFixed(0)}</td><td class="actions-cell"><button class="icon-btn edit" title="Edit Entry (Simplified)">&#9998;</button><button class="icon-btn delete" title="Delete Entry">&#128465;</button></td></tr>`;
-                });
-                mealHTML += '</table>';
-                foodLogEntries.innerHTML += mealHTML;
-            }
-        });
+    foodLogEntries.innerHTML = '';
+    if (!items || items.length === 0) {
+        foodLogEntries.innerHTML = '<p>No food logged for this day yet.</p>';
+        return;
     }
+    const groupedByMeal = items.reduce((acc, item) => {
+        (acc[item.meal] = acc[item.meal] || []).push(item);
+        return acc;
+    }, {});
+
+    MEALS.forEach(meal => {
+        if (groupedByMeal[meal]?.length > 0) {
+            let mealHTML = `<h4>${meal}</h4>`;
+            mealHTML += '<table class="log-table food-log-table"><thead><tr><th>Food</th><th>Fat</th><th>Carbs</th><th>Protein</th><th>Cals</th><th class="actions-cell">Actions</th></tr></thead><tbody>';
+            groupedByMeal[meal].forEach(item => {
+                mealHTML += `<tr data-entry-id="${item.id}">
+                                <td data-label="Food">${item.name}</td>
+                                <td data-label="Fat">${item.fat}</td>
+                                <td data-label="Carbs">${item.carbs}</td>
+                                <td data-label="Protein">${item.protein}</td>
+                                <td data-label="Cals">${item.calories.toFixed(0)}</td>
+                                <td class="actions-cell">
+                                    <button class="icon-btn edit" title="Edit Entry (Simplified)">&#9998;</button>
+                                    <button class="icon-btn delete" title="Delete Entry">&#128465;</button>
+                                </td>
+                            </tr>`;
+            });
+            mealHTML += '</tbody></table>';
+            foodLogEntries.innerHTML += mealHTML;
+        }
+    });
+}
     
     function calculateAndRenderTotals(items) {
         const totals = (items || []).reduce((acc, item) => {
@@ -421,3 +432,4 @@ function createFoodModule() {
     };
 
 }
+
