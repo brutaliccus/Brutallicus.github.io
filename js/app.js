@@ -35,6 +35,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const adminUsersTabBtn = document.getElementById('admin-users-tab-btn');
 
     const sanitizeNameForId = (name) => name.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const formatDate = (dateString) => {
+    if (!dateString || !dateString.includes('-')) return dateString; // Return original if invalid
+    // Create a date object, ensuring it's treated as local time, not UTC
+    const [year, month, day] = dateString.split('-');
+    const date = new Date(year, month - 1, day);
+    
+    return date.toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
+};
     const showApp = () => { authContainer.style.display = 'none'; appContainer.style.display = 'block'; };
     const showAuth = () => { authContainer.style.display = 'flex'; appContainer.style.display = 'none'; };
     const getTodayDateString = () => new Date().toISOString().split('T')[0];
@@ -180,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
             progressModule = createProgressModule();
             userAdminModule = createUserAdminModule();
 
-            const moduleApi = { db, getState, saveDataToFirebase, switchTab, getTodayDateString, USDA_API_KEY, sanitizeNameForId, calculateCurrentGoals };
+            const moduleApi = { db, getState, saveDataToFirebase, switchTab, getTodayDateString, USDA_API_KEY, sanitizeNameForId, calculateCurrentGoals, formatDate }; workoutModule.init(moduleApi);
 
             workoutModule.init(moduleApi);
             exerciseModule.init(moduleApi);
