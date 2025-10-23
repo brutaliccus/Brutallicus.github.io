@@ -495,7 +495,7 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
      * We can adjust this value if things are still too big or become too small.
     */
     html {
-        font-size: 14px;
+        font-size: 12px;
     }
 
     /* Make the main header title smaller */
@@ -536,3 +536,4 @@ body.theme-dark #scan-barcode-btn { background-color: var(--text-color); }
         max-width: 250px;
     }
 }
+
