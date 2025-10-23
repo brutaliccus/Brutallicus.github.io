@@ -84,9 +84,23 @@
                     <div class="workout-main-panel">
                         <section id="create-workout-section" class="card">
                             <h3>Create a Workout Log</h3>
+
+                            <div id="workout-calendar-container">
+                                <div class="calendar-header">
+                                    <button id="calendar-prev-week" class="nav-arrow" title="Previous Week">&#9664;</button>
+                                    <h4 id="calendar-month-year"></h4>
+                                    <button id="calendar-next-week" class="nav-arrow" title="Next Week">&#9654;</button>
+                                </div>
+                                <div class="calendar-days-header">
+                                    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                                </div>
+                                <div id="calendar-days-grid" class="calendar-days-grid">
+                                </div>
+                            </div>
+
                             <form id="create-workout-form">
                                 <div class="form-inline-group">
-                                    <div class="form-group">
+                                    <div class="form-group" style="display: none;">
                                         <label for="workout-date">Date</label>
                                         <input type="date" id="workout-date" required>
                                     </div>
@@ -102,11 +116,24 @@
                                 </div>
                             </form>
                         </section>
+
+                        <section id="rest-timer-section" class="card">
+                            <h3>Rest Timer</h3>
+                            <div id="rest-timer-display">00:00</div>
+                            <div class="rest-timer-controls">
+                                <button id="rest-timer-start-btn" class="btn-primary">Start</button>
+                                <button id="rest-timer-pause-btn" class="btn-secondary">Pause</button>
+                            </div>
+                        </section>
+
                         <section id="current-workout-section" class="card" style="display: none;">
                             <div class="workout-header">
                                 <button id="prev-workout-btn" class="nav-arrow" title="Previous Workout">&#9664;</button>
                                 <div class="workout-title-group">
                                     <h3 id="workout-title"></h3>
+                                    <div id="workout-timer-display" style="display: none;">
+                                        &#9201; <span>00:00:00</span>
+                                    </div>
                                     <div id="bodyweight-display-container" class="bodyweight-display">
                                         <strong>Body Weight:</strong>
                                         <span id="bodyweight-value"></span> lbs
@@ -193,8 +220,22 @@
             <div id="tab-food-log" class="tab-content">
                 <section id="create-food-log-section" class="card">
                     <h3>Log Food for a Day</h3>
+
+                    <div id="food-calendar-container">
+                        <div class="calendar-header">
+                            <button id="food-calendar-prev-week" class="nav-arrow" title="Previous Week">&#9664;</button>
+                            <h4 id="food-calendar-month-year"></h4>
+                            <button id="food-calendar-next-week" class="nav-arrow" title="Next Week">&#9654;</button>
+                        </div>
+                        <div class="calendar-days-header">
+                            <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                        </div>
+                        <div id="food-calendar-days-grid" class="calendar-days-grid">
+                        </div>
+                    </div>
+
                     <form id="create-food-log-form">
-                        <div class="form-group">
+                        <div class="form-group" style="display: none;">
                             <label for="food-log-date">Date</label>
                             <input type="date" id="food-log-date" required>
                         </div>
@@ -386,14 +427,10 @@
             <button id="scanner-close-btn" class="btn-secondary">Close</button>
         </div>
     </div>
-    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    
     <script src="predefined-exercises.js"></script>
-    
     <script src="js/app.js" defer></script>
-    
     <script src="js/modules/workout.js" defer></script>
     <script src="js/modules/exercises.js" defer></script>
     <script src="js/modules/food.js" defer></script>
