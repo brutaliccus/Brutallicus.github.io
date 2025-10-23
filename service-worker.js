@@ -1,48 +1,45 @@
 const CACHE_NAME = 'freilifts-cache-v1';
 const URLS_TO_CACHE = [
-    '/',
-    'index.html',
-    'style.css',
-    'predefined-exercises.js',
-    'js/app.js',
-    'js/modules/workout.js',
-    'js/modules/exercises.js',
-    'js/modules/food.js',
-    'js/modules/profile.js',
-    'js/modules/progress.js',
-    'js/modules/userAdmin.js',
-    'icons/icon-192x192.png',
-    'icons/icon-512x512.png'
+    './',
+    './index.html',
+    './style.css',
+    './predefined-exercises.js',
+    './js/app.js',
+    './js/modules/workout.js',
+    './js/modules/exercises.js',
+    './js/modules/food.js',
+    './js/modules/profile.js',
+    './js/modules/progress.js',
+    './js/modules/userAdmin.js',
+    './icons/icon-192x192.png',
+    './icons/icon-512x512.png'
 ];
 
-// --- INSTALL: Cache the application shell ---
+// Install the service worker and cache all the app's assets
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('Opened cache and caching app shell');
-                // Note: We are using the flattened structure now
+                console.log('Opened cache and caching app shell (v3)');
                 return cache.addAll(URLS_TO_CACHE);
             })
     );
 });
 
-// --- FETCH: Serve from cache first (Cache-First Strategy) ---
+// Intercept fetch requests and serve from cache first
 self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(event.request)
             .then(response => {
-                // If the request is in the cache, return it
                 if (response) {
                     return response;
                 }
-                // Otherwise, fetch it from the network
                 return fetch(event.request);
             })
     );
 });
 
-// --- ACTIVATE: Clean up old caches ---
+// Clean up old caches when a new service worker activates
 self.addEventListener('activate', event => {
     const cacheWhitelist = [CACHE_NAME];
     event.waitUntil(
@@ -58,5 +55,6 @@ self.addEventListener('activate', event => {
         })
     );
 });
+
 
 
