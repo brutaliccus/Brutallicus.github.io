@@ -101,34 +101,48 @@ function createFoodModule() {
     };
     
     const debouncedUsdaSearch = debounce(async (query) => {
-        const container = foodSearchResultsContainer;
-        const loader = document.getElementById('usda-search-loader');
-        const url = `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${USDA_API_KEY}&query=${encodeURIComponent(query)}&pageSize=5`;
-        try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
-            const data = await response.json();
-            if (loader) loader.remove();
-            if (!data.foods || data.foods.length === 0) {
-                if (!container.querySelector('.search-results-header')) {
-                    container.innerHTML += '<p class="search-meta-info">No USDA results found.</p>';
-                }
-                return;
-            }
-            let usdaResultsHTML = '<h6 class="search-results-header">USDA Database</h6>';
-            data.foods.forEach(food => {
-                const protein = food.foodNutrients.find(n => n.nutrientNumber === "203")?.value || 0;
-                const fat = food.foodNutrients.find(n => n.nutrientNumber === "204")?.value || 0;
-                const carbs = food.foodNutrients.find(n => n.nutrientNumber === "205")?.value || 0;
-                usdaResultsHTML += `<div class="search-result-item" data-food-type="usda" data-food-name="${food.description}" data-base-fat="${fat}" data-base-carbs="${carbs}" data-base-protein="${protein}"><strong>${food.description}</strong><small>(per 100g) - P: ${protein}g, C: ${carbs}g, F: ${fat}g</small></div>`;
-            });
-            container.innerHTML += usdaResultsHTML;
-        } catch (error) {
-            if (loader) loader.remove();
-            container.innerHTML += `<p style="color: var(--danger-color);">Error fetching USDA data.</p>`;
-            console.error("USDA API Fetch Error:", error);
+    const container = foodSearchResultsContainer;
+    const loader = document.getElementById('usda-search-loader');
+    const url = `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${USDA_API_KEY}&query=${encodeURIComponent(query)}&pageSize=5`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+        const data = await response.json();
+        
+        if (loader) loader.remove();
+
+        // --- START OF FIX ---
+        // If the user has already selected a food (which displays the macro details),
+        // then this late-arriving network result should be ignored.
+        if (foodMacroDetails.style.display !== 'none') {
+            return; 
         }
-    }, 500);
+        // --- END OF FIX ---
+
+        if (!data.foods || data.foods.length === 0) {
+            if (!container.querySelector('.search-results-header')) {
+                container.innerHTML += '<p class="search-meta-info">No USDA results found.</p>';
+            }
+            return;
+        }
+
+        let usdaResultsHTML = '<h6 class="search-results-header">USDA Database</h6>';
+        data.foods.forEach(food => {
+            const protein = food.foodNutrients.find(n => n.nutrientNumber === "203")?.value || 0;
+            const fat = food.foodNutrients.find(n => n.nutrientNumber === "204")?.value || 0;
+            const carbs = food.foodNutrients.find(n => n.nutrientNumber === "205")?.value || 0;
+            usdaResultsHTML += `<div class="search-result-item" data-food-type="usda" data-food-name="${food.description}" data-base-fat="${fat}" data-base-carbs="${carbs}" data-base-protein="${protein}"><strong>${food.description}</strong><small>(per 100g) - P: ${protein}g, C: ${carbs}g, F: ${fat}g</small></div>`;
+        });
+        container.innerHTML += usdaResultsHTML;
+    } catch (error) {
+        if (loader) loader.remove();
+        // Also check if we should show this error
+        if (foodMacroDetails.style.display === 'none') {
+            container.innerHTML += `<p style="color: var(--danger-color);">Error fetching USDA data.</p>`;
+        }
+        console.error("USDA API Fetch Error:", error);
+    }
+}, 300);
 
     function renderFoodLogView() {
         populateUniqueFoods();
@@ -405,4 +419,5 @@ function createFoodModule() {
         init,
         render: renderFoodLogView
     };
+
 }
