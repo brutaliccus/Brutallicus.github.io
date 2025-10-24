@@ -791,3 +791,98 @@ body.theme-dark #scan-barcode-btn {
 .rest-timer-controls button {
     min-width: 100px; /* Give buttons a nice uniform width */
 }
+/* --- NEW FOOD LOG ENTRY STYLES --- */
+.food-entries-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.food-item-details {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--background-color);
+}
+
+.food-item-summary {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    list-style: none; /* Hide the default triangle */
+}
+
+.food-item-summary::-webkit-details-marker {
+    display: none; /* Hide triangle in Chrome/Safari */
+}
+
+.food-item-summary:hover {
+    background-color: var(--hover-background, rgba(0,0,0,0.05));
+}
+
+.food-item-summary .food-name {
+    font-weight: bold;
+}
+
+.food-item-summary .food-calories {
+    color: var(--text-color);
+    font-weight: bold;
+}
+
+.food-item-content {
+    padding: 0 1rem 1rem 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.macro-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    padding: 1rem 0;
+    color: var(--secondary-color);
+    font-size: 0.9em;
+}
+
+.food-item-actions {
+    text-align: right;
+}
+
+.edit-quantity-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    padding-top: 0.5rem;
+}
+
+.edit-quantity-form input,
+.edit-quantity-form select {
+    width: 80px;
+    padding: 0.5rem;
+    text-align: center;
+}
+#custom-food-modal .modal-content {
+    text-align: left;
+}
+
+#custom-food-modal h2 {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+#custom-food-modal p {
+    text-align: center;
+    color: var(--secondary-color);
+    margin-bottom: 1.5rem;
+}
+
+#custom-food-modal hr {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin: 1.5rem 0;
+}
+
+#custom-food-modal .form-actions {
+    margin-top: 1.5rem;
+    justify-content: flex-end;
+}
