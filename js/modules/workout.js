@@ -168,34 +168,58 @@ function createWorkoutModule() {
         renderLogEntries(workout.exercises, isFinished);
     }
     function renderLogEntries(exercises, isFinished) {
-        workoutLogEntries.innerHTML = '';
-        if (!exercises || exercises.length === 0) {
-            workoutLogEntries.innerHTML = '<p>No exercises logged yet.</p>';
-            return;
-        }
-        let tableHTML = `<table class="log-table"><thead><tr>
-                         <th>Exercise</th>
-                         <th>Weight (lbs)</th>
-                         <th>Sets</th>
-                         <th>Reps</th>
-                         ${!isFinished ? '<th class="actions-cell">Actions</th>' : ''}
-                         </tr></thead><tbody>`;
-        exercises.forEach(entry => {
-            tableHTML += `
-                <tr data-entry-id="${entry.id}">
-                    <td data-label="Exercise">${entry.name}</td>
-                    <td data-label="Weight">${entry.weight}</td>
-                    <td data-label="Sets">${entry.sets}</td>
-                    <td data-label="Reps">${entry.reps}</td>
-                    ${!isFinished ? `<td class="actions-cell">
-                                        <button class="icon-btn edit" title="Edit Entry">&#9998;</button>
-                                        <button class="icon-btn delete" title="Delete Entry">&#128465;</button>
-                                    </td>` : ''}
-                </tr>`;
-        });
-        tableHTML += '</tbody></table>';
-        workoutLogEntries.innerHTML = tableHTML;
+    workoutLogEntries.innerHTML = '';
+    if (!exercises || exercises.length === 0) {
+        workoutLogEntries.innerHTML = '<p>No exercises logged yet.</p>';
+        return;
     }
+
+    let tableHTML = `<table class="log-table"><thead><tr>
+                     <th>Exercise</th>
+                     <th>Weight (lbs)</th>
+                     <th>Sets</th>
+                     <th>Reps</th>
+                     ${!isFinished ? '<th class="actions-cell">Actions</th>' : ''}
+                     </tr></thead><tbody>`;
+
+    exercises.forEach(entry => {
+        // Check if this specific entry is in "edit mode"
+        const isEditMode = entry.isEditing === true;
+
+        tableHTML += `<tr data-entry-id="${entry.id}" class="${isEditMode ? 'edit-mode' : ''}">`;
+
+        if (isEditMode) {
+            // RENDER INPUTS FOR EDIT MODE
+            // Note: We don't allow editing the exercise name itself here for simplicity,
+            // as that would require a complex search input.
+            tableHTML += `
+                <td data-label="Exercise">${entry.name}</td>
+                <td data-label="Weight"><input type="number" class="inline-edit-weight" value="${entry.weight}" step="0.1"></td>
+                <td data-label="Sets"><input type="number" class="inline-edit-sets" value="${entry.sets}"></td>
+                <td data-label="Reps"><input type="number" class="inline-edit-reps" value="${entry.reps}"></td>
+                <td class="actions-cell">
+                    <button class="icon-btn save" title="Save Changes">&#10004;</button> <!-- Checkmark -->
+                    <button class="icon-btn cancel" title="Cancel Edit">&#10006;</button> <!-- X -->
+                </td>
+            `;
+        } else {
+            // RENDER NORMAL TEXT
+            tableHTML += `
+                <td data-label="Exercise">${entry.name}</td>
+                <td data-label="Weight">${entry.weight}</td>
+                <td data-label="Sets">${entry.sets}</td>
+                <td data-label="Reps">${entry.reps}</td>
+                ${!isFinished ? `<td class="actions-cell">
+                                    <button class="icon-btn edit" title="Edit Entry">&#9998;</button>
+                                    <button class="icon-btn delete" title="Delete Entry">&#128465;</button>
+                                </td>` : ''}
+            `;
+        }
+        tableHTML += `</tr>`;
+    });
+    tableHTML += '</tbody></table>';
+    workoutLogEntries.innerHTML = tableHTML;
+}
     function renderSummary(category) {
         const today = getTodayDateString();
         const lastWorkout = getState().workouts
@@ -225,11 +249,17 @@ function createWorkoutModule() {
     // --- LOGIC & EVENT HANDLERS ---
     function bindEvents() {
         calendarPrevWeekBtn.addEventListener('click', () => {
-            calendarViewDate.setDate(calendarViewDate.getDate() - 7);
+            // Create a new date object from the current one before changing it
+            const newDate = new Date(calendarViewDate);
+            newDate.setDate(newDate.getDate() - 7);
+            calendarViewDate = newDate; // Re-assign the module's date variable
             renderWorkoutCalendar();
         });
         calendarNextWeekBtn.addEventListener('click', () => {
-            calendarViewDate.setDate(calendarViewDate.getDate() + 7);
+            // Create a new date object from the current one before changing it
+            const newDate = new Date(calendarViewDate);
+            newDate.setDate(newDate.getDate() + 7);
+            calendarViewDate = newDate; // Re-assign the module's date variable
             renderWorkoutCalendar();
         });
         calendarDaysGrid.addEventListener('click', (e) => {
@@ -353,36 +383,59 @@ function createWorkoutModule() {
             }, 200);
         });
         workoutLogEntries.addEventListener('click', (e) => {
-            const entryRow = e.target.closest('tr');
-            if (!entryRow) return;
-            const entryId = Number(entryRow.dataset.entryId);
-            const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
-            const entryIndex = workout.exercises.findIndex(ex => ex.id === entryId);
-            if (entryIndex === -1) return;
-            if (e.target.matches('.icon-btn.delete')) {
-                workout.exercises.splice(entryIndex, 1);
-                saveDataToFirebase();
-                renderCurrentWorkoutView();
-            } else if (e.target.matches('.icon-btn.edit')) {
-                const entry = workout.exercises[entryIndex];
-                const newWeight = prompt("Enter new weight:", entry.weight);
-                const newSets = prompt("Enter new sets:", entry.sets);
-                const newReps = prompt("Enter new reps:", entry.reps);
-                if (newWeight !== null) entry.weight = newWeight;
-                if (newSets !== null) entry.sets = newSets;
-                if (newReps !== null) entry.reps = newReps;
-                saveDataToFirebase();
-                renderCurrentWorkoutView();
-            }
-        });
-        summaryCategorySelect.addEventListener('change', (e) => renderSummary(e.target.value));
+    const entryRow = e.target.closest('tr[data-entry-id]');
+    if (!entryRow) return;
 
+    const entryId = Number(entryRow.dataset.entryId);
+    const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
+    if (!workout) return;
+
+    const entry = workout.exercises.find(ex => ex.id === entryId);
+    if (!entry) return;
+
+    // --- NEW LOGIC ---
+
+    if (e.target.matches('.icon-btn.edit')) {
+        // Toggle 'isEditing' flag and re-render
+        entry.isEditing = true;
+        renderCurrentWorkoutView();
+    } 
+    else if (e.target.matches('.icon-btn.delete')) {
+        // Find index to splice from the array
+        const entryIndex = workout.exercises.findIndex(ex => ex.id === entryId);
+        if (entryIndex > -1) {
+            workout.exercises.splice(entryIndex, 1);
+            saveDataToFirebase();
+            renderCurrentWorkoutView();
+        }
+    }
+    else if (e.target.matches('.icon-btn.save')) {
+        // Get new values from the input fields within the row
+        const newWeight = entryRow.querySelector('.inline-edit-weight').value;
+        const newSets = entryRow.querySelector('.inline-edit-sets').value;
+        const newReps = entryRow.querySelector('.inline-edit-reps').value;
+
+        // Update the entry in the state
+        entry.weight = newWeight || 0;
+        entry.sets = newSets || 0;
+        entry.reps = newReps || 0;
+        delete entry.isEditing; // Clean up the temporary flag
+
+        saveDataToFirebase();
+        renderCurrentWorkoutView();
+    }
+    else if (e.target.matches('.icon-btn.cancel')) {
+        // Simply remove the flag and re-render to discard changes
+        delete entry.isEditing;
+        renderCurrentWorkoutView();
+    }
+});
+        summaryCategorySelect.addEventListener('change', (e) => renderSummary(e.target.value));
         // NEW: This is the only new code block being added.
         workoutCategorySelect.addEventListener('change', (e) => {
             summaryCategorySelect.value = e.target.value;
             renderSummary(e.target.value);
         });
-
         editBodyweightBtn.addEventListener('click', () => {
             const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
             if (!workout) return;
