@@ -84,7 +84,6 @@
                     <div class="workout-main-panel">
                         <section id="create-workout-section" class="card">
                             <h3>Create a Workout Log</h3>
-
                             <div id="workout-calendar-container">
                                 <div class="calendar-header">
                                     <button id="calendar-prev-week" class="nav-arrow" title="Previous Week">&#9664;</button>
@@ -97,7 +96,6 @@
                                 <div id="calendar-days-grid" class="calendar-days-grid">
                                 </div>
                             </div>
-
                             <form id="create-workout-form">
                                 <div class="form-inline-group">
                                     <div class="form-group" style="display: none;">
@@ -116,7 +114,6 @@
                                 </div>
                             </form>
                         </section>
-
                         <section id="rest-timer-section" class="card">
                             <h3>Rest Timer</h3>
                             <div id="rest-timer-display">00:00</div>
@@ -125,7 +122,6 @@
                                 <button id="rest-timer-pause-btn" class="btn-secondary">Pause</button>
                             </div>
                         </section>
-
                         <section id="current-workout-section" class="card" style="display: none;">
                             <div class="workout-header">
                                 <button id="prev-workout-btn" class="nav-arrow" title="Previous Workout">&#9664;</button>
@@ -220,7 +216,6 @@
             <div id="tab-food-log" class="tab-content">
                 <section id="create-food-log-section" class="card">
                     <h3>Log Food for a Day</h3>
-
                     <div id="food-calendar-container">
                         <div class="calendar-header">
                             <button id="food-calendar-prev-week" class="nav-arrow" title="Previous Week">&#9664;</button>
@@ -233,7 +228,6 @@
                         <div id="food-calendar-days-grid" class="calendar-days-grid">
                         </div>
                     </div>
-
                     <form id="create-food-log-form">
                         <div class="form-group" style="display: none;">
                             <label for="food-log-date">Date</label>
@@ -294,7 +288,10 @@
                                 <input type="number" id="food-item-protein" step="0.1" placeholder="0" required>
                             </div>
                         </div>
-                        <button type="submit" class="btn-primary">Add Food</button>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">Add Food</button>
+                            <button type="button" id="show-custom-food-modal-btn" class="btn-secondary">New Custom Food</button>
+                        </div>
                     </form>
                     <div class="food-log-display-layout">
                         <div id="food-log-entries"></div>
@@ -421,12 +418,63 @@
             </div>
         </main>
     </div>
+
     <div id="scanner-modal" class="modal-overlay">
         <div class="modal-content">
             <div id="barcode-reader"></div>
             <button id="scanner-close-btn" class="btn-secondary">Close</button>
         </div>
     </div>
+
+    <div id="custom-food-modal" class="modal-overlay">
+        <div class="modal-content">
+            <form id="custom-food-form">
+                <h2>New Custom Food</h2>
+                <p>Define the nutrition facts for a single serving of your food.</p>
+                
+                <div class="form-group">
+                    <label for="custom-food-name">Food Name</label>
+                    <input type="text" id="custom-food-name" required placeholder="e.g., My Protein Powder">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="custom-serving-size">Serving Size</label>
+                        <input type="number" id="custom-serving-size" required placeholder="e.g., 30">
+                    </div>
+                    <div class="form-group">
+                        <label for="custom-serving-unit">Unit</label>
+                        <input type="text" id="custom-serving-unit" value="g" readonly>
+                    </div>
+                </div>
+
+                <hr>
+                <p><strong>Macros per serving:</strong></p>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="custom-fat">Fat (g)</label>
+                        <input type="number" id="custom-fat" step="0.1" required placeholder="e.g., 2.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="custom-carbs">Carbs (g)</label>
+                        <input type="number" id="custom-carbs" step="0.1" required placeholder="e.g., 5">
+                    </div>
+                    <div class="form-group">
+                        <label for="custom-protein">Protein (g)</label>
+                        <input type="number" id="custom-protein" step="0.1" required placeholder="e.g., 24">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Save Custom Food</button>
+                    <button type="button" id="custom-food-modal-close-btn" class="btn-secondary">Cancel</button>
+                </div>
+                <p id="custom-food-error" class="auth-error"></p>
+            </form>
+        </div>
+    </div>
+    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="predefined-exercises.js"></script>
@@ -434,6 +482,7 @@
     <script src="js/modules/workout.js" defer></script>
     <script src="js/modules/exercises.js" defer></script>
     <script src="js/modules/food.js" defer></script>
+    <script src="js/modules/food-api.js" defer></script>
     <script src="js/modules/profile.js" defer></script>
     <script src="js/modules/progress.js" defer></script>
     <script src="js/modules/userAdmin.js" defer></script>
