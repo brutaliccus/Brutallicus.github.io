@@ -188,18 +188,18 @@ document.addEventListener('DOMContentLoaded', () => {
             workoutModule = createWorkoutModule();
             exerciseModule = createExerciseModule();
             foodModule = createFoodModule();
+			const foodApiModule = createFoodApiModule({ USDA_API_KEY });
             profileModule = createProfileModule();
             progressModule = createProgressModule();
             userAdminModule = createUserAdminModule();
 
-            const moduleApi = { db, getState, saveDataToFirebase, switchTab, getTodayDateString, USDA_API_KEY, sanitizeNameForId, calculateCurrentGoals, formatDate }; workoutModule.init(moduleApi);
-
-            workoutModule.init(moduleApi);
-            exerciseModule.init(moduleApi);
-            foodModule.init(moduleApi);
-            profileModule.init(moduleApi);
-            progressModule.init(moduleApi);
-            userAdminModule.init(moduleApi);
+            const moduleApi = { db, getState, saveDataToFirebase, switchTab, getTodayDateString, foodApi: foodApiModule, sanitizeNameForId, calculateCurrentGoals, formatDate };
+			workoutModule.init(moduleApi);
+			exerciseModule.init(moduleApi);
+			foodModule.init(moduleApi);
+			profileModule.init(moduleApi);
+			progressModule.init(moduleApi);
+			userAdminModule.init(moduleApi);
             
             const hasAboutMeData = !!prefs.about;
             const initialTab = hasAboutMeData ? 'tab-workout-log' : 'tab-about-me';
