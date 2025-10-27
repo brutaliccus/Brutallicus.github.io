@@ -28,26 +28,29 @@ function createProgressModule() {
     }
 
     function renderProgressCharts() {
-        const sortedFoodDates = Object.keys(getState().foodLogs).sort((a, b) => new Date(a) - new Date(b));
-        
-        const foodLabels = sortedFoodDates.map(date => formatDate(date));
-        
-        const calorieData = sortedFoodDates.map(date => (getState().foodLogs[date].items || []).reduce((sum, item) => sum + item.calories, 0));
-        const proteinData = sortedFoodDates.map(date => (getState().foodLogs[date].items || []).reduce((sum, item) => sum + item.protein, 0));
-        
-        const weightEntries = getState().workouts.filter(w => w.bodyweight && w.bodyweight > 0).sort((a, b) => new Date(a.date) - new Date(b.date));
-        
-        const weightLabels = weightEntries.map(w => formatDate(w.date));
-        
-        const weightData = weightEntries.map(w => w.bodyweight);
-        
-        const { goals: currentGoals } = calculateCurrentGoals();
-        const goalWeight = parseFloat(getState().about.goalWeight) || 0;
+    const sortedFoodDates = Object.keys(getState().foodLogs).sort((a, b) => new Date(a) - new Date(b));
+    const foodLabels = sortedFoodDates.map(date => formatDate(date));
 
-        caloriesChart = renderLineChart('calories-chart', caloriesChart, foodLabels, calorieData, 'Total Calories', 'rgba(255, 99, 132, 1)', currentGoals.calories || 0);
-        proteinChart = renderLineChart('protein-chart', proteinChart, foodLabels, proteinData, 'Protein (g)', 'rgba(54, 162, 235, 1)', currentGoals.protein || 0);
-        weightChart = renderLineChart('weight-chart', weightChart, weightLabels, weightData, 'Body Weight (lbs)', 'rgba(75, 192, 192, 1)', goalWeight);
-    }
+    // THIS IS THE FIX: Using `Number(...) || 0` to prevent NaN errors
+    const calorieData = sortedFoodDates.map(date =>
+        (getState().foodLogs[date].items || []).reduce((sum, item) => sum + (Number(item.calories) || 0), 0)
+    );
+    const proteinData = sortedFoodDates.map(date =>
+        (getState().foodLogs[date].items || []).reduce((sum, item) => sum + (Number(item.protein) || 0), 0)
+    );
+
+    const weightEntries = getState().workouts.filter(w => w.bodyweight && w.bodyweight > 0).sort((a, b) => new Date(a.date) - new Date(b.date));
+    const weightLabels = weightEntries.map(w => formatDate(w.date));
+    // Also made this more robust with parseFloat
+    const weightData = weightEntries.map(w => parseFloat(w.bodyweight));
+
+    const { goals: currentGoals } = calculateCurrentGoals();
+    const goalWeight = parseFloat(getState().about.goalWeight) || 0;
+
+    caloriesChart = renderLineChart('calories-chart', caloriesChart, foodLabels, calorieData, 'Total Calories', 'rgba(255, 99, 132, 1)', currentGoals.calories || 0);
+    proteinChart = renderLineChart('protein-chart', proteinChart, foodLabels, proteinData, 'Protein (g)', 'rgba(54, 162, 235, 1)', currentGoals.protein || 0);
+    weightChart = renderLineChart('weight-chart', weightChart, weightLabels, weightData, 'Body Weight (lbs)', 'rgba(75, 192, 192, 1)', goalWeight);
+}
     
     function bindEvents() {
         myProgressTab.addEventListener('click', (e) => {
