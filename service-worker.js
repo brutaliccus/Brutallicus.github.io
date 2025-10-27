@@ -8,6 +8,7 @@ const URLS_TO_CACHE = [
     './js/modules/workout.js',
     './js/modules/exercises.js',
     './js/modules/food.js',
+	'./js/modules/food-api.js',
     './js/modules/profile.js',
     './js/modules/progress.js',
     './js/modules/userAdmin.js',

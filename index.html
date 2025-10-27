@@ -49,36 +49,46 @@
             <p id="auth-error" class="auth-error"></p>
         </div>
     </div>
+
     <!-- Main App Container -->
     <div id="app-container" style="display: none;">
         <header>
             <div class="header-controls">
-                <div class="theme-switcher-container">
-                    <label for="theme-switcher">Theme:</label>
-                    <select id="theme-switcher">
-                        <option value="theme-light">Light</option>
-                        <option value="theme-dark">Dark</option>
-                        <option value="theme-forest">Forest</option>
-                    </select>
-                </div>
-                 <div id="user-info">
+                <div id="user-info">
                     <span id="user-name-display"></span>
-                    <button id="logout-btn">Logout</button>
-                 </div>
+                </div>
+                <!-- NEW: Settings Menu Structure -->
+                <div class="settings-menu">
+                    <button id="settings-menu-btn" class="icon-btn" title="Settings">&#9776;</button>
+                    <div id="settings-dropdown" class="dropdown-content" style="display: none;">
+                        <button class="tab-button dropdown-item" data-tab="tab-manage-exercises">Manage Exercises</button>
+                        <button class="tab-button dropdown-item" data-tab="tab-about-me">About Me</button>
+                        <button class="tab-button dropdown-item" id="admin-users-tab-btn" data-tab="tab-users" style="display: none;">Users</button>
+                        <hr>
+                        <div class="theme-switcher-container dropdown-item">
+                            <label for="theme-switcher">Theme:</label>
+                            <select id="theme-switcher">
+                                <option value="theme-light">Light</option>
+                                <option value="theme-dark">Dark</option>
+                                <option value="theme-forest">Forest</option>
+                            </select>
+                        </div>
+                        <hr>
+                        <button id="logout-btn" class="dropdown-item">Logout</button>
+                    </div>
+                </div>
             </div>
             <h1>Freilifts</h1>
+            <!-- Main navigation bar is now cleaner -->
             <nav id="tab-nav">
                 <button class="tab-button" data-tab="tab-workout-log">Workout Log</button>
-                <button class="tab-button" data-tab="tab-manage-exercises">Manage Exercises</button>
                 <button class="tab-button" data-tab="tab-food-log">Food Log</button>
                 <button class="tab-button" data-tab="tab-personal-records">Personal Records</button>
                 <button class="tab-button" data-tab="tab-my-progress">My Progress</button>
-                <button class="tab-button" data-tab="tab-about-me">About Me</button>
-                <button class="tab-button" id="admin-users-tab-btn" data-tab="tab-users" style="display: none;">Users</button>
             </nav>
         </header>
+
         <main>
-            <!-- Tab 1: Workout Log -->
             <div id="tab-workout-log" class="tab-content">
                 <div class="workout-log-layout">
                     <div class="workout-main-panel">
@@ -96,7 +106,7 @@
                                 <div id="calendar-days-grid" class="calendar-days-grid">
                                 </div>
                             </div>
-                            <form id="create-workout-form">
+                            <form id="create-workout-form" novalidate>
                                 <div class="form-inline-group">
                                     <div class="form-group" style="display: none;">
                                         <label for="workout-date">Date</label>
@@ -110,7 +120,7 @@
                                         <label for="workout-category">Workout Type</label>
                                         <select id="workout-category"></select>
                                     </div>
-                                    <button type="submit" class="btn-primary">Start Workout</button>
+                                    <button type="button" id="start-workout-btn" class="btn-primary">Start Workout</button>
                                 </div>
                             </form>
                         </section>
@@ -184,7 +194,6 @@
                     </div>
                 </div>
             </div>
-            <!-- Tab 2: Manage Exercises -->
             <div id="tab-manage-exercises" class="tab-content">
                 <h2>Manage Exercises</h2>
                 <section class="card">
@@ -212,7 +221,6 @@
                     <div id="exercise-list-layout"></div>
                 </section>
             </div>
-            <!-- Tab 3: Food Log -->
             <div id="tab-food-log" class="tab-content">
                 <section id="create-food-log-section" class="card">
                     <h3>Log Food for a Day</h3>
@@ -478,7 +486,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="predefined-exercises.js"></script>
-    <script src="js/app.js" defer></script>
     <script src="js/modules/workout.js" defer></script>
     <script src="js/modules/exercises.js" defer></script>
     <script src="js/modules/food.js" defer></script>
@@ -486,5 +493,7 @@
     <script src="js/modules/profile.js" defer></script>
     <script src="js/modules/progress.js" defer></script>
     <script src="js/modules/userAdmin.js" defer></script>
+    <!-- NOTE: app.js must be last to ensure all module factory functions are defined before it runs -->
+    <script src="js/app.js" defer></script>
 </body>
 </html>

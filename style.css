@@ -886,3 +886,75 @@ body.theme-dark #scan-barcode-btn {
     margin-top: 1.5rem;
     justify-content: flex-end;
 }
+/* --- NEW SETTINGS MENU STYLES --- */
+.settings-menu {
+    position: relative;
+    display: inline-block;
+}
+
+#settings-menu-btn {
+    font-size: 1.5rem;
+    color: var(--text-color-light);
+}
+
+.dropdown-content {
+    display: none; /* Hidden by default, JS will toggle this */
+    position: absolute;
+    right: 0;
+    top: calc(100% + 0.5rem); /* Position below the button */
+    background-color: var(--card-background);
+    min-width: 220px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    z-index: 100;
+    padding: 0.5rem 0;
+	transform: translateZ(0); 
+}
+
+.dropdown-content hr {
+    margin: 0.5rem 0;
+    border: none;
+    border-top: 1px solid var(--border-color);
+}
+
+.dropdown-item {
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    text-align: left;
+    background-color: transparent;
+    color: var(--text-color);
+    border: none;
+    font-size: 1rem;
+}
+
+.dropdown-item:hover {
+    background-color: var(--background-color);
+}
+
+/* Specific styles for items moved into the dropdown */
+.dropdown-content .tab-button {
+    border: none; /* Remove border from tab buttons */
+}
+
+.dropdown-content .theme-switcher-container {
+    display: flex;
+    justify-content: flex-start; /* Or just remove justify-content */
+    align-items: center;
+    gap: 0.5rem; /* Add some space between label and select */
+}
+
+#logout-btn {
+    width: 100%;
+    background: none;
+    color: var(--danger-color);
+    font-weight: bold;
+}
+
+#logout-btn:hover {
+    background-color: var(--background-color);
+}
+.dropdown-content #theme-switcher {
+    width: auto; /* Override the global 100% width */
+    flex-shrink: 0; /* Prevent it from shrinking if space is tight */
+}
