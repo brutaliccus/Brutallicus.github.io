@@ -11,14 +11,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const USDA_API_KEY = 'aemBTeknGhNmAlKKGpJUiewRCOMdaAVYlAtK91an';
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    
+
     const state = {
-        currentUserId: null, exercises: [], workouts: [], foodLogs: {}, uniqueFoods: [], userGoals: {},
+        currentUserId: null,
+        exercises: [],
+        workouts: [],
+        foodLogs: {},
+        uniqueFoods: [],
+        userGoals: {},
         about: {}
     };
     const getState = () => state;
-    
-    let workoutModule, exerciseModule, foodModule, profileModule, progressModule, userAdminModule;
+
+    let workoutModule, exerciseModule, foodModule, foodApiModule, profileModule, progressModule, userAdminModule;
 
     const authContainer = document.getElementById('auth-container');
     const appContainer = document.getElementById('app-container');
@@ -34,35 +39,55 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabContents = document.querySelectorAll('.tab-content');
     const adminUsersTabBtn = document.getElementById('admin-users-tab-btn');
 
+    // NEW: References for the settings menu elements
+    const settingsMenuBtn = document.getElementById('settings-menu-btn');
+    const settingsDropdown = document.getElementById('settings-dropdown');
+
     const sanitizeNameForId = (name) => name.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
     const formatDate = (dateString) => {
-    if (!dateString || !dateString.includes('-')) return dateString; // Return original if invalid
-    // Create a date object, ensuring it's treated as local time, not UTC
-    const [year, month, day] = dateString.split('-');
-    const date = new Date(year, month - 1, day);
-    
-    return date.toLocaleDateString('en-US', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    });
-};
-    const showApp = () => { authContainer.style.display = 'none'; appContainer.style.display = 'block'; };
-    const showAuth = () => { authContainer.style.display = 'flex'; appContainer.style.display = 'none'; };
+        if (!dateString || !dateString.includes('-')) return dateString;
+        const [year, month, day] = dateString.split('-');
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString('en-US', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+    };
+
+    const showApp = () => {
+        authContainer.style.display = 'none';
+        appContainer.style.display = 'block';
+    };
+    const showAuth = () => {
+        authContainer.style.display = 'flex';
+        appContainer.style.display = 'none';
+    };
     const getTodayDateString = () => new Date().toISOString().split('T')[0];
 
     const applyTheme = (themeName) => {
-        document.body.className = ''; document.body.classList.add(themeName);
+        document.body.className = '';
+        document.body.classList.add(themeName);
         localStorage.setItem('freilifts_theme', themeName);
-        if (state.currentUserId) { db.ref(`users/${state.currentUserId}/preferences/theme`).set(themeName); }
+        if (state.currentUserId) {
+            db.ref(`users/${state.currentUserId}/preferences/theme`).set(themeName);
+        }
     };
+
     const loadTheme = () => {
         const savedTheme = localStorage.getItem('freilifts_theme') || 'theme-dark';
-        themeSwitcher.value = savedTheme; applyTheme(savedTheme);
+        themeSwitcher.value = savedTheme;
+        applyTheme(savedTheme);
     };
+
     const switchTab = (tabId) => {
-        document.querySelectorAll('.tab-button').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+        // Deactivate all buttons first, then activate the correct one(s)
+        document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll(`.tab-button[data-tab="${tabId}"]`).forEach(b => b.classList.add('active'));
+
         tabContents.forEach(c => c.classList.toggle('active', c.id === tabId));
+
         if (tabId === 'tab-workout-log' && workoutModule) workoutModule.render();
         if (tabId === 'tab-manage-exercises' && exerciseModule) exerciseModule.render();
         if (tabId === 'tab-food-log' && foodModule) foodModule.render();
@@ -71,9 +96,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tabId === 'tab-about-me' && profileModule) profileModule.renderAboutMe();
         if (tabId === 'tab-users' && userAdminModule) userAdminModule.render();
     };
+
     const saveDataToFirebase = () => {
         if (!state.currentUserId) return;
-        const userData = { exercises: state.exercises, workouts: state.workouts, foodLogs: state.foodLogs, uniqueFoods: state.uniqueFoods };
+        // Added workoutTemplates to the save data
+        const userData = {
+            exercises: state.exercises,
+            workouts: state.workouts,
+            foodLogs: state.foodLogs,
+            uniqueFoods: state.uniqueFoods,
+            workoutTemplates: state.workoutTemplates
+        };
         db.ref(`users/${state.currentUserId}/data`).set(userData);
     };
 
@@ -82,11 +115,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!about || !about.age || !about.height) {
             return { goals: { calories: 0, protein: 0, fat: 0, carbs: 0 }, weightUsed: 0, maintenance: 0 };
         }
-
         const startWeight = parseFloat(about.startWeight) || 0;
         const goalWeight = parseFloat(about.goalWeight) || 0;
         const resetDate = about.bodyweightResetDate ? new Date(about.bodyweightResetDate) : null;
-
         const loggedWeights = workouts
             .filter(w => {
                 if (resetDate) {
@@ -97,40 +128,31 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .map(w => parseFloat(w.bodyweight))
             .filter(bw => bw > 0);
-        
         const allWeights = startWeight > 0 ? [startWeight, ...loggedWeights] : loggedWeights;
         const lowestWeight = allWeights.length > 0 ? Math.min(...allWeights) : 0;
         const weightToUse = lowestWeight > 0 ? lowestWeight : startWeight;
-
         if (weightToUse === 0) {
             return { goals: { calories: 0, protein: 0, fat: 0, carbs: 0 }, weightUsed: 0, maintenance: 0 };
         }
-
         const sex = about.sex || 'male';
         const age = parseFloat(about.age);
         const heightIn = parseFloat(about.height);
         const activityMultiplier = parseFloat(about.activityLevel) || 1.55;
-
         const weightKg = weightToUse * 0.453592;
         const heightCm = heightIn * 2.54;
         const bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * age) + (sex === 'male' ? 5 : -161);
         const tdee = bmr * activityMultiplier;
-
         let goalCalories = tdee;
         if (goalWeight > 0) {
             if (goalWeight < weightToUse) goalCalories = tdee - 500;
             else if (goalWeight > weightToUse) goalCalories = tdee + 300;
         }
-
         const proteinGoalWeight = goalWeight > 0 ? goalWeight : weightToUse;
         const targetProtein = proteinGoalWeight * 0.7;
         const targetFat = (goalCalories * 0.25) / 9;
         const targetCarbs = (goalCalories - (targetProtein * 4) - (targetFat * 9)) / 4;
-
         const goals = { calories: goalCalories, protein: targetProtein, fat: targetFat, carbs: targetCarbs };
-        
         state.userGoals = goals;
-
         return { goals, weightUsed: weightToUse, maintenance: tdee };
     }
 
@@ -143,11 +165,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const userStatusDatabaseRef = db.ref('/status/' + userId);
         const isOfflineForDatabase = { state: 'offline', last_changed: firebase.database.ServerValue.TIMESTAMP };
         const isOnlineForDatabase = { state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP };
+        
         db.ref('.info/connected').on('value', (snapshot) => {
             if (!snapshot.val()) return;
             userStatusDatabaseRef.onDisconnect().set(isOfflineForDatabase).then(() => userStatusDatabaseRef.set(isOnlineForDatabase));
         });
-
+        
         db.ref('users/' + userId).once('value', (snapshot) => {
             if (!snapshot.exists()) {
                 alert("Error: Could not load your data.");
@@ -157,8 +180,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const userData = snapshot.val() || {};
             const data = userData.data || {};
             const prefs = userData.preferences || {};
-
             state.workouts = data.workouts || [];
+            state.workoutTemplates = data.workoutTemplates || []; // Ensure templates are loaded
             state.foodLogs = data.foodLogs || {};
             state.uniqueFoods = data.uniqueFoods || [];
             state.about = prefs.about || {};
@@ -178,84 +201,145 @@ document.addEventListener('DOMContentLoaded', () => {
             if (newExercisesAdded) {
                 db.ref(`users/${state.currentUserId}/data/exercises`).set(state.exercises);
             }
-
-            if (userData.isAdmin) { adminUsersTabBtn.style.display = 'inline-block'; }
+            if (userData.isAdmin) {
+                adminUsersTabBtn.style.display = 'block';
+            }
             
             const userTheme = prefs.theme || 'theme-dark';
             themeSwitcher.value = userTheme;
             applyTheme(userTheme);
-            
+
             workoutModule = createWorkoutModule();
             exerciseModule = createExerciseModule();
             foodModule = createFoodModule();
-			const foodApiModule = createFoodApiModule({ USDA_API_KEY });
+            foodApiModule = createFoodApiModule({ USDA_API_KEY });
             profileModule = createProfileModule();
             progressModule = createProgressModule();
             userAdminModule = createUserAdminModule();
-
-            const moduleApi = { db, getState, saveDataToFirebase, switchTab, getTodayDateString, foodApi: foodApiModule, sanitizeNameForId, calculateCurrentGoals, formatDate };
-			workoutModule.init(moduleApi);
-			exerciseModule.init(moduleApi);
-			foodModule.init(moduleApi);
-			profileModule.init(moduleApi);
-			progressModule.init(moduleApi);
-			userAdminModule.init(moduleApi);
             
-            const hasAboutMeData = !!prefs.about;
+            const moduleApi = { db, getState, saveDataToFirebase, switchTab, getTodayDateString, foodApi: foodApiModule, sanitizeNameForId, calculateCurrentGoals, formatDate };
+            
+            workoutModule.init(moduleApi);
+            exerciseModule.init(moduleApi);
+            foodModule.init(moduleApi);
+            profileModule.init(moduleApi);
+            progressModule.init(moduleApi);
+            userAdminModule.init(moduleApi);
+
+            const hasAboutMeData = !!(state.about && state.about.age);
             const initialTab = hasAboutMeData ? 'tab-workout-log' : 'tab-about-me';
             switchTab(initialTab);
         });
     };
+    
+    // NEW: Function to handle all settings menu events
+    function bindSettingsMenuEvents() {
+        settingsMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevents the window listener from firing immediately
+            const isVisible = settingsDropdown.style.display === 'block';
+            settingsDropdown.style.display = isVisible ? 'none' : 'block';
+        });
 
-    themeSwitcher.addEventListener('change', (e) => applyTheme(e.target.value));
-    tabNav.addEventListener('click', (e) => { if (e.target.matches('.tab-button')) switchTab(e.target.dataset.tab); });
-    logoutBtn.addEventListener('click', () => {
-        if (state.currentUserId) {
-            db.ref('/status/' + state.currentUserId).set({ state: 'offline', last_changed: firebase.database.ServerValue.TIMESTAMP });
-        }
-        state.currentUserId = null; localStorage.removeItem('freilifts_loggedInUser'); location.reload();
-    });
-    showRegisterBtn.addEventListener('click', (e) => { e.preventDefault(); loginForm.style.display = 'none'; registerForm.style.display = 'block'; authError.textContent = ''; });
-    showLoginBtn.addEventListener('click', (e) => { e.preventDefault(); loginForm.style.display = 'block'; registerForm.style.display = 'none'; authError.textContent = ''; });
-    registerForm.addEventListener('submit', (e) => {
-        e.preventDefault(); authError.textContent = '';
-        const name = document.getElementById('register-name').value;
-        const pin = document.getElementById('register-pin').value;
-        const userId = sanitizeNameForId(name);
-        if (!userId) { authError.textContent = 'Name cannot be empty.'; return; }
-        if (pin.length < 4) { authError.textContent = 'PIN must be at least 4 characters.'; return; }
-        const userRef = db.ref('users/' + userId);
-        userRef.once('value', (snapshot) => {
-            if (snapshot.exists()) {
-                authError.textContent = 'This name is already taken.';
-            } else {
-                userRef.set({ name, pin, data: { exercises: PREDEFINED_EXERCISES } }).then(() => {
-                    loadUserAndInitializeApp(userId, name);
-                });
+        // Handles clicks on items within the dropdown
+        settingsDropdown.addEventListener('click', (e) => {
+    const target = e.target;
+
+    // Handle tab switching
+    if (target.matches('.tab-button')) {
+        switchTab(target.dataset.tab);
+        settingsDropdown.style.display = 'none'; // Close AFTER switching tab
+    }
+
+    // Handle logout button click
+    if (target.id === 'logout-btn') {
+        // The main logout listener will do the work.
+        // We just close the menu.
+        settingsDropdown.style.display = 'none';
+    }
+    
+    // If the click was on the theme switcher, do nothing and let the browser handle the select dropdown.
+    // Because we don't have an unconditional `close` anymore, it will stay open.
+});
+
+        // Handles clicking "away" from the menu to close it
+        window.addEventListener('click', (e) => {
+    // Now it checks that the click isn't on the button AND isn't inside the dropdown
+            if (settingsDropdown.style.display === 'block' && !settingsMenuBtn.contains(e.target) && !settingsDropdown.contains(e.target)) {
+                settingsDropdown.style.display = 'none';
             }
         });
-    });
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault(); authError.textContent = '';
-        const name = document.getElementById('login-name').value;
-        const pin = document.getElementById('login-pin').value;
-        const userId = sanitizeNameForId(name);
-        if (!userId) { authError.textContent = 'Please enter your name.'; return; }
-        db.ref('users/' + userId).once('value', (snapshot) => {
-            if (snapshot.exists()) {
-                const userData = snapshot.val();
-                if (userData.pin === pin) {
-                    loadUserAndInitializeApp(userId, userData.name);
+    }
+
+    function bindGlobalEvents() {
+        showRegisterBtn.addEventListener('click', (e) => { e.preventDefault(); loginForm.style.display = 'none'; registerForm.style.display = 'block'; authError.textContent = ''; });
+        showLoginBtn.addEventListener('click', (e) => { e.preventDefault(); loginForm.style.display = 'block'; registerForm.style.display = 'none'; authError.textContent = ''; });
+        
+        registerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            authError.textContent = '';
+            const name = document.getElementById('register-name').value;
+            const pin = document.getElementById('register-pin').value;
+            const userId = sanitizeNameForId(name);
+            if (!userId) { authError.textContent = 'Name cannot be empty.'; return; }
+            if (pin.length < 4) { authError.textContent = 'PIN must be at least 4 characters.'; return; }
+            const userRef = db.ref('users/' + userId);
+            userRef.once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    authError.textContent = 'This name is already taken.';
                 } else {
-                    authError.textContent = 'Incorrect PIN.';
+                    userRef.set({ name, pin, data: { exercises: PREDEFINED_EXERCISES } }).then(() => {
+                        loadUserAndInitializeApp(userId, name);
+                    });
                 }
-            } else {
-                authError.textContent = 'User not found.';
+            });
+        });
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            authError.textContent = '';
+            const name = document.getElementById('login-name').value;
+            const pin = document.getElementById('login-pin').value;
+            const userId = sanitizeNameForId(name);
+            if (!userId) { authError.textContent = 'Please enter your name.'; return; }
+            db.ref('users/' + userId).once('value', (snapshot) => {
+                if (snapshot.exists()) {
+                    const userData = snapshot.val();
+                    if (userData.pin === pin) {
+                        loadUserAndInitializeApp(userId, userData.name);
+                    } else {
+                        authError.textContent = 'Incorrect PIN.';
+                    }
+                } else {
+                    authError.textContent = 'User not found.';
+                }
+            });
+        });
+
+        tabNav.addEventListener('click', (e) => {
+            if (e.target.matches('.tab-button')) {
+                switchTab(e.target.dataset.tab);
             }
         });
-    });
+
+        logoutBtn.addEventListener('click', () => {
+            if (state.currentUserId) {
+                db.ref('/status/' + state.currentUserId).set({ state: 'offline', last_changed: firebase.database.ServerValue.TIMESTAMP });
+            }
+            state.currentUserId = null;
+            localStorage.removeItem('freilifts_loggedInUser');
+            location.reload();
+        });
+
+        themeSwitcher.addEventListener('change', (e) => {
+            applyTheme(e.target.value);
+        });
+    }
+
     const initializeApp = () => {
         loadTheme();
+        bindGlobalEvents();
+        bindSettingsMenuEvents(); // Bind events for the new menu
+
         const rememberedUser = JSON.parse(localStorage.getItem('freilifts_loggedInUser'));
         if (rememberedUser) {
             loadUserAndInitializeApp(rememberedUser.id, rememberedUser.name);
@@ -263,8 +347,10 @@ document.addEventListener('DOMContentLoaded', () => {
             showAuth();
         }
     };
+    
     initializeApp();
 });
+
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js').then(r => console.log('SW registered')).catch(e => console.error('SW registration failed:', e));
