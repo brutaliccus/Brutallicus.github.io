@@ -1,4 +1,4 @@
-// js/modules/workout.js (V7 - Smart Set Grouping in Summary)
+// js/modules/workout.js (V8 - Dynamic Inline Rest Timer - Complete)
 function createWorkoutModule() {
     // --- 1. MODULE SCOPE & REFERENCES ---
     let db, getState, saveDataToFirebase, getTodayDateString, formatDate, showConfirmation;
@@ -7,9 +7,7 @@ function createWorkoutModule() {
         selectedCalendarDate = null,
         workoutTimerInterval = null,
         restTimerInterval = null,
-        restTimerStartTime = 0,
-        restTimerElapsedTime = 0,
-        isRestTimerPaused = true,
+        activeRestTimer = { setId: null, startTime: 0 },
         activeExerciseInput = null;
 
     // DOM Elements
@@ -34,9 +32,6 @@ function createWorkoutModule() {
     const calendarPrevWeekBtn = document.getElementById('calendar-prev-week');
     const calendarNextWeekBtn = document.getElementById('calendar-next-week');
     const workoutTimerDisplay = document.getElementById('workout-timer-display');
-    const restTimerDisplay = document.getElementById('rest-timer-display');
-    const restTimerStartBtn = document.getElementById('rest-timer-start-btn');
-    const restTimerPauseBtn = document.getElementById('rest-timer-pause-btn');
     const CATEGORIES = ['Push', 'Pull', 'Legs', 'Other'];
 
     // --- 2. HELPER & UTILITY ---
@@ -63,40 +58,24 @@ function createWorkoutModule() {
             workoutTimerDisplay.querySelector('span').textContent = formatDuration(Date.now() - startTime);
         }, 1000);
     };
-    const updateRestTimerDisplay = () => {
-        const currentSegmentTime = restTimerStartTime ? Date.now() - restTimerStartTime : 0;
-        const totalTime = restTimerElapsedTime + currentSegmentTime;
-        restTimerDisplay.textContent = formatRestTime(totalTime);
-    };
-
-    /**
-     * NEW: Groups identical sets into a readable summary string.
-     * @param {Array} sets - The array of set objects.
-     * @returns {string} An HTML string summarizing the sets.
-     */
     function createSetsSummaryString(sets) {
         if (!sets || sets.length === 0) return 'No sets logged';
-
         const setGroups = new Map();
         sets.forEach(set => {
             const weight = set.weight || 0;
             const reps = set.reps || 0;
             const key = `${weight}-${reps}`;
-            
             if (!setGroups.has(key)) {
                 setGroups.set(key, { count: 0, weight, reps });
             }
             setGroups.get(key).count++;
         });
-
         const summaryParts = [];
         for (const group of setGroups.values()) {
             const { count, weight, reps } = group;
-            const plural = count > 1 ? 'sets' : 'set';
-            summaryParts.push(`${count} ${plural} of ${reps} x ${weight}lbs`);
+            summaryParts.push(`${count} ${count > 1 ? 'sets' : 'set'} of ${reps} x ${weight}lbs`);
         }
-
-        return summaryParts.join('<br>'); // Use line breaks for readability
+        return summaryParts.join('<br>');
     }
 
     // --- 3. DATA MIGRATION ---
@@ -107,21 +86,12 @@ function createWorkoutModule() {
         exercises.forEach(oldEntry => {
             if (!oldEntry.name) return;
             if (!exerciseMap.has(oldEntry.name)) {
-                exerciseMap.set(oldEntry.name, {
-                    id: oldEntry.id || Date.now() + Math.random(),
-                    name: oldEntry.name,
-                    isEditing: false,
-                    sets: []
-                });
+                exerciseMap.set(oldEntry.name, { id: oldEntry.id || Date.now() + Math.random(), name: oldEntry.name, isEditing: false, sets: [] });
             }
             const exercise = exerciseMap.get(oldEntry.name);
             const numSets = parseInt(oldEntry.sets, 10) || 1;
             for (let i = 0; i < numSets; i++) {
-                exercise.sets.push({
-                    id: Date.now() + Math.random(),
-                    weight: oldEntry.weight || '',
-                    reps: oldEntry.reps || ''
-                });
+                exercise.sets.push({ id: Date.now() + Math.random(), weight: oldEntry.weight || '', reps: oldEntry.reps || '' });
             }
         });
         return Array.from(exerciseMap.values());
@@ -147,23 +117,28 @@ function createWorkoutModule() {
             exerciseCard.className = 'exercise-card';
             exerciseCard.dataset.exerciseId = exercise.id;
             const isNameSetAndNotEditing = exercise.name && !exercise.isEditing;
-
             let headerHTML = `<div class="exercise-header">${isNameSetAndNotEditing
                 ? `<h4>${exercise.name}</h4><div class="actions">${!isWorkoutFinished ? `<button class="icon-btn edit-exercise" title="Edit Exercise">&#9998;</button><button class="icon-btn delete-exercise" title="Delete Exercise">&#128465;</button>`:''}</div>`
                 : `<input type="text" class="inline-log-input exercise-name-input" placeholder="Enter Exercise Name..." value="${exercise.name || ''}" autocomplete="off">`}</div>`;
             
             let bodyHTML = '<div class="set-list">';
             if (exercise.name) {
-                if (exercise.sets.length > 0) {
-                     bodyHTML += `<div class="set-row-header"><span>WEIGHT (LBS)</span><span>REPS</span></div>`;
-                }
+                if (exercise.sets.length > 0) bodyHTML += `<div class="set-row-header"><span>WEIGHT (LBS)</span><span>REPS</span></div>`;
+                
                 exercise.sets.forEach((set, index) => {
+                    let setRowHTML = '';
                     if (isNameSetAndNotEditing || isWorkoutFinished) {
-                        bodyHTML += `<div class="set-row"><span class="set-number">${index + 1}</span><span>${set.weight || 0}</span><span>${set.reps || 0}</span></div>`;
+                        setRowHTML = `<div class="set-row"><span class="set-number">${index + 1}</span><span>${set.weight || 0}</span><span>${set.reps || 0}</span></div>`;
                     } else {
-                        bodyHTML += `<div class="set-row" data-set-id="${set.id}"><span class="set-number">${index + 1}</span>${createStepperInput('weight', set.weight, 5)}${createStepperInput('reps', set.reps, 1)}<button class="icon-btn delete-set" title="Delete Set">&#10006;</button></div>`;
+                        setRowHTML = `<div class="set-row" data-set-id="${set.id}"><span class="set-number">${index + 1}</span>${createStepperInput('weight', set.weight, 5)}${createStepperInput('reps', set.reps, 1)}<button class="icon-btn complete-set-btn" title="Complete Set">&#10004;</button><button class="icon-btn delete-set" title="Delete Set">&#10006;</button></div>`;
                     }
+                    
+                    if (activeRestTimer.setId === set.id) {
+                        setRowHTML += `<div class="rest-timer-inline"><span class="rest-timer-inline-time">00:00</span><div class="rest-timer-inline-actions"><button class="btn-secondary dismiss-rest-timer">Dismiss</button></div></div>`;
+                    }
+                    bodyHTML += setRowHTML;
                 });
+                
                 if (!isNameSetAndNotEditing && !isWorkoutFinished) {
                     bodyHTML += `<div class="add-set-btn-container"><button class="add-set-btn" title="Add Set">+</button></div>`;
                 }
@@ -207,10 +182,6 @@ function createWorkoutModule() {
         renderLogEntries();
     }
     
-    /**
-     * MODIFIED: This function now uses the createSetsSummaryString helper
-     * to group sets for a cleaner display.
-     */
     function renderSummary(category) {
         const today = getTodayDateString();
         const lastWorkout = getState().workouts.filter(w => w.category === category && w.date !== today).sort((a, b) => new Date(b.date) - new Date(a.date))[0];
@@ -287,6 +258,8 @@ function createWorkoutModule() {
             const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
             if (!workout || workout.isFinished) return;
             if (e.target.matches('.add-exercise-btn')) {
+                if (restTimerInterval) clearInterval(restTimerInterval);
+                activeRestTimer = { setId: null, startTime: 0 };
                 workout.exercises.push({ id: Date.now(), name: '', sets: [], isEditing: true });
                 renderLogEntries();
                 const newCard = workoutLogEntries.querySelector(`[data-exercise-id="${workout.exercises[workout.exercises.length-1].id}"]`);
@@ -297,8 +270,9 @@ function createWorkoutModule() {
             const exerciseId = Number(exerciseCard.dataset.exerciseId);
             const exercise = workout.exercises.find(ex => ex.id === exerciseId);
             if (!exercise) return;
-
             if (e.target.matches('.add-set-btn')) {
+                if (restTimerInterval) clearInterval(restTimerInterval);
+                activeRestTimer = { setId: null, startTime: 0 };
                 const lastSet = exercise.sets[exercise.sets.length - 1];
                 exercise.sets.push({ id: Date.now(), weight: lastSet ? lastSet.weight : '', reps: lastSet ? lastSet.reps : '' });
                 renderLogEntries();
@@ -331,6 +305,23 @@ function createWorkoutModule() {
                 const increment = Number(e.target.dataset.increment);
                 input.value = Math.max(0, (Number(input.value) || 0) + increment).toString();
                 input.dispatchEvent(new Event('input', { bubbles: true }));
+            } else if (e.target.matches('.complete-set-btn')) {
+                if (restTimerInterval) clearInterval(restTimerInterval);
+                const setRow = e.target.closest('.set-row');
+                const setId = Number(setRow.dataset.setId);
+                activeRestTimer = { setId, startTime: Date.now() };
+                renderLogEntries();
+                const timerDisplay = workoutLogEntries.querySelector('.rest-timer-inline-time');
+                if (timerDisplay) {
+                    timerDisplay.textContent = '00:00';
+                    restTimerInterval = setInterval(() => {
+                        timerDisplay.textContent = formatRestTime(Date.now() - activeRestTimer.startTime);
+                    }, 1000);
+                }
+            } else if (e.target.matches('.dismiss-rest-timer')) {
+                if (restTimerInterval) clearInterval(restTimerInterval);
+                activeRestTimer = { setId: null, startTime: 0 };
+                renderLogEntries();
             }
         });
         
@@ -342,7 +333,6 @@ function createWorkoutModule() {
             const exerciseId = Number(exerciseCard.dataset.exerciseId);
             const exercise = workout.exercises.find(ex => ex.id === exerciseId);
             if (!exercise) return;
-            
             if (e.target.matches('.exercise-name-input')) {
                 activeExerciseInput = e.target;
                 exercise.name = e.target.value;
@@ -356,7 +346,6 @@ function createWorkoutModule() {
                 exerciseSearchResults.innerHTML = filtered.map(ex => `<div class="search-result-item">${ex.name}</div>`).join('');
                 exerciseSearchResults.style.display = filtered.length > 0 ? 'block' : 'none';
             }
-            
             const setRow = e.target.closest('.set-row');
             if (setRow && e.target.matches('.inline-log-input')) {
                 const setId = Number(setRow.dataset.setId);
@@ -401,7 +390,6 @@ function createWorkoutModule() {
             }
         });
 
-        // --- Other Global Listeners ---
         startWorkoutBtn.addEventListener('click', () => {
             const date = selectedCalendarDate;
             if (getState().workouts.some(w => w.date === date)) { alert('A workout for this date already exists.'); return; }
@@ -421,8 +409,6 @@ function createWorkoutModule() {
         editBodyweightBtn.addEventListener('click', () => { const w = getState().workouts.find(w => w.date === currentWorkoutDate); if (!w) return; const nBw = prompt("Enter new body weight (lbs):", w.bodyweight || ''); if (nBw !== null) { w.bodyweight = parseFloat(nBw) || ''; saveDataToFirebase(); render(); } });
         summaryCategorySelect.addEventListener('change', (e) => renderSummary(e.target.value));
         workoutCategorySelect.addEventListener('change', (e) => { summaryCategorySelect.value = e.target.value; renderSummary(e.target.value); });
-        restTimerStartBtn.addEventListener('click', () => { if (restTimerInterval) clearInterval(restTimerInterval); isRestTimerPaused = false; restTimerElapsedTime = 0; restTimerStartTime = Date.now(); restTimerPauseBtn.textContent = 'Pause'; updateRestTimerDisplay(); restTimerInterval = setInterval(updateRestTimerDisplay, 1000); });
-        restTimerPauseBtn.addEventListener('click', () => { if (isRestTimerPaused) { if (restTimerElapsedTime === 0 && !restTimerStartTime) return; isRestTimerPaused = false; restTimerStartTime = Date.now(); restTimerPauseBtn.textContent = 'Pause'; updateRestTimerDisplay(); restTimerInterval = setInterval(updateRestTimerDisplay, 1000); } else { if (restTimerInterval) clearInterval(restTimerInterval); restTimerElapsedTime += Date.now() - restTimerStartTime; isRestTimerPaused = true; restTimerPauseBtn.textContent = 'Resume'; } });
     }
     
     // --- 6. INITIALIZATION ---
