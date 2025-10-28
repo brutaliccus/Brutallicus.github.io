@@ -1,7 +1,9 @@
 // js/modules/workout.js
 function createWorkoutModule() {
-    // --- MODULE STATE ---
-    let db, getState, saveDataToFirebase, switchTab, getTodayDateString, sanitizeNameForId, formatDate;
+    // --- 1. MODULE SCOPE VARIABLES & DOM REFERENCES ---
+    let db, getState, saveDataToFirebase, switchTab, getTodayDateString, sanitizeNameForId, formatDate, showConfirmation;
+
+    // State
     let currentWorkoutDate = null;
     let calendarViewDate = new Date();
     let selectedCalendarDate = null;
@@ -10,24 +12,22 @@ function createWorkoutModule() {
     let restTimerStartTime = 0;
     let restTimerElapsedTime = 0;
     let isRestTimerPaused = true;
-    // --- DOM ELEMENTS ---
-    const createWorkoutForm = document.getElementById('create-workout-form');
+    let activeExerciseInput = null;
+
+    // DOM Elements
+    const createWorkoutSection = document.getElementById('create-workout-section');
     const workoutDateInput = document.getElementById('workout-date');
     const workoutBodyweightInput = document.getElementById('workout-bodyweight');
     const workoutCategorySelect = document.getElementById('workout-category');
+    const startWorkoutBtn = document.getElementById('start-workout-btn');
     const currentWorkoutSection = document.getElementById('current-workout-section');
     const workoutTitle = document.getElementById('workout-title');
     const prevWorkoutBtn = document.getElementById('prev-workout-btn');
     const nextWorkoutBtn = document.getElementById('next-workout-btn');
     const editWorkoutBtn = document.getElementById('edit-workout-btn');
     const deleteWorkoutBtn = document.getElementById('delete-workout-btn');
-    const addLogEntryForm = document.getElementById('add-log-entry-form');
-    const searchExerciseInput = document.getElementById('search-exercise-input');
-    const searchResultsContainer = document.getElementById('search-results-container');
-    const logWeightInput = document.getElementById('log-weight');
-    const logSetsInput = document.getElementById('log-sets');
-    const logRepsInput = document.getElementById('log-reps');
     const workoutLogEntries = document.getElementById('workout-log-entries');
+    const exerciseSearchResults = document.getElementById('workout-exercise-search-results');
     const finishWorkoutBtn = document.getElementById('finish-workout-btn');
     const summaryCategorySelect = document.getElementById('summary-category-select');
     const workoutSummaryContent = document.getElementById('workout-summary-content');
@@ -42,14 +42,18 @@ function createWorkoutModule() {
     const restTimerDisplay = document.getElementById('rest-timer-display');
     const restTimerStartBtn = document.getElementById('rest-timer-start-btn');
     const restTimerPauseBtn = document.getElementById('rest-timer-pause-btn');
+
     const CATEGORIES = ['Push', 'Pull', 'Legs', 'Other'];
-    // --- HELPER FUNCTIONS ---
+
+    // --- 2. HELPER & UTILITY FUNCTIONS ---
+
     function toLocalISOString(date) {
         const year = date.getFullYear();
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
         const day = date.getDate().toString().padStart(2, '0');
         return `${year}-${month}-${day}`;
     }
+
     function formatDuration(ms) {
         if (!ms || ms < 0) return '00:00:00';
         const totalSeconds = Math.floor(ms / 1000);
@@ -58,6 +62,7 @@ function createWorkoutModule() {
         const seconds = totalSeconds % 60;
         return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
+    
     function startTimerDisplay(startTime) {
         if (workoutTimerInterval) clearInterval(workoutTimerInterval);
         workoutTimerDisplay.style.display = 'inline-flex';
@@ -66,6 +71,7 @@ function createWorkoutModule() {
             workoutTimerDisplay.querySelector('span').textContent = formatDuration(elapsed);
         }, 1000);
     }
+
     function formatRestTime(ms) {
         if (!ms || ms < 0) return '00:00';
         const totalSeconds = Math.floor(ms / 1000);
@@ -73,39 +79,49 @@ function createWorkoutModule() {
         const seconds = totalSeconds % 60;
         return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
+    
     function updateRestTimerDisplay() {
         const currentSegmentTime = restTimerStartTime ? Date.now() - restTimerStartTime : 0;
         const totalTime = restTimerElapsedTime + currentSegmentTime;
         restTimerDisplay.textContent = formatRestTime(totalTime);
     }
-    // --- RENDER FUNCTIONS ---
+
+    // --- 3. RENDER FUNCTIONS ---
+
     function renderWorkoutCalendar() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const workoutMap = new Map(getState().workouts.map(w => [w.date, w]));
+
         calendarViewDate.setHours(0, 0, 0, 0);
         const startOfWeek = new Date(calendarViewDate);
         startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+
         calendarMonthYear.textContent = calendarViewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
         calendarDaysGrid.innerHTML = '';
+
         for (let i = 0; i < 7; i++) {
             const day = new Date(startOfWeek);
             day.setDate(day.getDate() + i);
             const dateString = toLocalISOString(day);
             const workout = workoutMap.get(dateString);
+
             const isToday = day.getTime() === today.getTime();
             const isSelected = dateString === selectedCalendarDate;
             const isOtherMonth = day.getMonth() !== calendarViewDate.getMonth();
+
             const dayEl = document.createElement('div');
             dayEl.className = 'calendar-day';
             dayEl.dataset.date = dateString;
             if (isToday) dayEl.classList.add('is-today');
             if (isSelected) dayEl.classList.add('is-selected');
             if (isOtherMonth) dayEl.classList.add('other-month');
+
             const dayNumber = document.createElement('span');
             dayNumber.className = 'day-number';
             dayNumber.textContent = day.getDate();
             dayEl.appendChild(dayNumber);
+
             if (workout) {
                 const bar = document.createElement('button');
                 bar.className = 'calendar-workout-bar';
@@ -116,49 +132,68 @@ function createWorkoutModule() {
             calendarDaysGrid.appendChild(dayEl);
         }
     }
-    function render() {
-        if (!selectedCalendarDate) {
-            selectedCalendarDate = getTodayDateString();
+
+    function renderLogEntries(exercises, isFinished) {
+        workoutLogEntries.innerHTML = '';
+        if ((exercises && exercises.length > 0) || !isFinished) {
+            workoutLogEntries.innerHTML = `<div class="workout-log-header-row"><span>Exercise</span><span>Weight (lbs)</span><span>Sets</span><span>Reps</span><span class="actions-cell"></span></div>`;
+        } else if (exercises.length === 0 && isFinished) {
+            workoutLogEntries.innerHTML = '<p>No exercises were logged for this workout.</p>';
         }
-        if (currentWorkoutDate === null) {
-            const workoutForSelectedDate = getState().workouts.find(w => w.date === selectedCalendarDate);
-            if (workoutForSelectedDate) {
-                currentWorkoutDate = selectedCalendarDate;
+
+        (exercises || []).forEach(entry => {
+            const row = document.createElement('div');
+            row.className = 'workout-log-entry-row';
+            row.dataset.entryId = entry.id;
+            if (isFinished) {
+                row.innerHTML = `
+                    <span>${entry.name || '-'}</span>
+                    <span class="center-text">${entry.weight || 0}</span>
+                    <span class="center-text">${entry.sets || 0}</span>
+                    <span class="center-text">${entry.reps || 0}</span>
+                    <div class="actions-cell"></div>`;
+            } else {
+                row.innerHTML = `
+                    <input type="text" class="inline-log-input" data-field="name" placeholder="Exercise Name" value="${entry.name || ''}" autocomplete="off">
+                    <input type="number" class="inline-log-input" data-field="weight" placeholder="lbs" value="${entry.weight || ''}">
+                    <input type="number" class="inline-log-input" data-field="sets" placeholder="sets" value="${entry.sets || ''}">
+                    <input type="number" class="inline-log-input" data-field="reps" placeholder="reps" value="${entry.reps || ''}">
+                    <div class="actions-cell">
+                        <button class="icon-btn delete-log-row" title="Delete Row">&#128465;</button>
+                    </div>`;
             }
-        }
-        renderWorkoutCalendar();
-        if (currentWorkoutDate) {
-            renderCurrentWorkoutView();
-            currentWorkoutSection.style.display = 'block';
-        } else {
-            if (workoutTimerInterval) clearInterval(workoutTimerInterval);
-            currentWorkoutSection.style.display = 'none';
+            workoutLogEntries.appendChild(row);
+        });
+
+        if (!isFinished) {
+            const addRow = document.createElement('div');
+            addRow.className = 'add-exercise-row';
+            addRow.innerHTML = `<button class="add-exercise-btn">+</button>`;
+            workoutLogEntries.appendChild(addRow);
         }
     }
+
     function renderCurrentWorkoutView() {
         const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
-        if (!workout) {
-            return;
-        }
-        workoutDateInput.value = workout.date;
+        if (!workout) return;
+
         const sortedWorkouts = getState().workouts.sort((a, b) => new Date(b.date) - new Date(a.date));
         const currentIndex = sortedWorkouts.findIndex(w => w.date === currentWorkoutDate);
+
         prevWorkoutBtn.disabled = currentIndex >= sortedWorkouts.length - 1;
         nextWorkoutBtn.disabled = currentIndex <= 0;
+
         const isFinished = workout.isFinished || false;
         workoutTitle.textContent = `${formatDate(workout.date)} - ${workout.category}`;
-        if (workout.bodyweight) {
-            bodyweightValue.textContent = workout.bodyweight;
-            bodyweightDisplayContainer.style.display = 'block';
-        } else {
-            bodyweightDisplayContainer.style.display = 'none';
-        }
-        addLogEntryForm.style.display = isFinished ? 'none' : 'block';
+        bodyweightValue.textContent = workout.bodyweight;
+        bodyweightDisplayContainer.style.display = workout.bodyweight ? 'block' : 'none';
+
         finishWorkoutBtn.style.display = isFinished ? 'none' : 'block';
         editWorkoutBtn.style.display = isFinished ? 'inline-block' : 'none';
+
         if (workoutTimerInterval) clearInterval(workoutTimerInterval);
         if (workout.duration) {
-            workoutTimerDisplay.querySelector('span').textContent = `Duration: ${formatDuration(workout.duration)}`;
+            workoutTimerDisplay.querySelector('span').textContent = formatDuration(workout.duration);
             workoutTimerDisplay.style.display = 'inline-flex';
         } else if (!isFinished && workout.startTime) {
             startTimerDisplay(workout.startTime);
@@ -167,78 +202,23 @@ function createWorkoutModule() {
         }
         renderLogEntries(workout.exercises, isFinished);
     }
-    function renderLogEntries(exercises, isFinished) {
-    workoutLogEntries.innerHTML = '';
-    if (!exercises || exercises.length === 0) {
-        workoutLogEntries.innerHTML = '<p>No exercises logged yet.</p>';
-        return;
-    }
 
-    let tableHTML = `<table class="log-table"><thead><tr>
-                     <th>Exercise</th>
-                     <th>Weight (lbs)</th>
-                     <th>Sets</th>
-                     <th>Reps</th>
-                     ${!isFinished ? '<th class="actions-cell">Actions</th>' : ''}
-                     </tr></thead><tbody>`;
-
-    exercises.forEach(entry => {
-        // Check if this specific entry is in "edit mode"
-        const isEditMode = entry.isEditing === true;
-
-        tableHTML += `<tr data-entry-id="${entry.id}" class="${isEditMode ? 'edit-mode' : ''}">`;
-
-        if (isEditMode) {
-            // RENDER INPUTS FOR EDIT MODE
-            // Note: We don't allow editing the exercise name itself here for simplicity,
-            // as that would require a complex search input.
-            tableHTML += `
-                <td data-label="Exercise">${entry.name}</td>
-                <td data-label="Weight"><input type="number" class="inline-edit-weight" value="${entry.weight}" step="0.1"></td>
-                <td data-label="Sets"><input type="number" class="inline-edit-sets" value="${entry.sets}"></td>
-                <td data-label="Reps"><input type="number" class="inline-edit-reps" value="${entry.reps}"></td>
-                <td class="actions-cell">
-                    <button class="icon-btn save" title="Save Changes">&#10004;</button> <!-- Checkmark -->
-                    <button class="icon-btn cancel" title="Cancel Edit">&#10006;</button> <!-- X -->
-                </td>
-            `;
-        } else {
-            // RENDER NORMAL TEXT
-            tableHTML += `
-                <td data-label="Exercise">${entry.name}</td>
-                <td data-label="Weight">${entry.weight}</td>
-                <td data-label="Sets">${entry.sets}</td>
-                <td data-label="Reps">${entry.reps}</td>
-                ${!isFinished ? `<td class="actions-cell">
-                                    <button class="icon-btn edit" title="Edit Entry">&#9998;</button>
-                                    <button class="icon-btn delete" title="Delete Entry">&#128465;</button>
-                                </td>` : ''}
-            `;
-        }
-        tableHTML += `</tr>`;
-    });
-    tableHTML += '</tbody></table>';
-    workoutLogEntries.innerHTML = tableHTML;
-}
     function renderSummary(category) {
         const today = getTodayDateString();
         const lastWorkout = getState().workouts
             .filter(w => w.category === category && w.date !== today)
             .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+
         if (!lastWorkout) {
             workoutSummaryContent.innerHTML = '<p>No previous workout found for this category.</p>';
             return;
         }
+
         let summaryHTML = `<p><strong>${formatDate(lastWorkout.date)}</strong></p>`;
         if (lastWorkout.exercises && lastWorkout.exercises.length > 0) {
             summaryHTML += '<table class="log-table"><thead><tr><th>Exercise</th><th>Weight</th><th>Sets</th><th>Reps</th></tr></thead><tbody>';
             lastWorkout.exercises.forEach(ex => {
-                summaryHTML += `<tr>
-                                    <td data-label="Exercise">${ex.name}</td>
-                                    <td data-label="Weight">${ex.weight}</td>
-                                    <td data-label="Sets">${ex.sets}</td>
-                                    <td data-label="Reps">${ex.reps}</td>
-                                </tr>`;
+                summaryHTML += `<tr> <td>${ex.name}</td> <td>${ex.weight}</td> <td>${ex.sets}</td> <td>${ex.reps}</td> </tr>`;
             });
             summaryHTML += '</tbody></table>';
         } else {
@@ -246,196 +226,175 @@ function createWorkoutModule() {
         }
         workoutSummaryContent.innerHTML = summaryHTML;
     }
-    // --- LOGIC & EVENT HANDLERS ---
+
+    /**
+     * =========================================================================
+     * CORRECTED RENDER FUNCTION
+     * This function now correctly shows/hides only the workout logging section,
+     * leaving the top "Create Workout" section with the calendar always visible.
+     * =========================================================================
+     */
+    function render() {
+        if (!selectedCalendarDate) {
+            selectedCalendarDate = getTodayDateString();
+            workoutDateInput.value = selectedCalendarDate;
+        }
+
+        // Determine if a workout exists for the selected date
+        const workoutExists = getState().workouts.some(w => w.date === selectedCalendarDate);
+        currentWorkoutDate = workoutExists ? selectedCalendarDate : null;
+
+        // Always render the calendar
+        renderWorkoutCalendar();
+
+        // Now, only toggle the visibility of the workout logging section
+        if (currentWorkoutDate) {
+            // A workout is selected (or was just created)
+            renderCurrentWorkoutView();
+            currentWorkoutSection.style.display = 'block';
+        } else {
+            // No workout is selected for the current day
+            if (workoutTimerInterval) clearInterval(workoutTimerInterval);
+            currentWorkoutSection.style.display = 'none';
+        }
+    }
+
+
+    // --- 4. EVENT BINDING ---
+
     function bindEvents() {
-        calendarPrevWeekBtn.addEventListener('click', () => {
-            // Create a new date object from the current one before changing it
-            const newDate = new Date(calendarViewDate);
-            newDate.setDate(newDate.getDate() - 7);
-            calendarViewDate = newDate; // Re-assign the module's date variable
-            renderWorkoutCalendar();
-        });
-        calendarNextWeekBtn.addEventListener('click', () => {
-            // Create a new date object from the current one before changing it
-            const newDate = new Date(calendarViewDate);
-            newDate.setDate(newDate.getDate() + 7);
-            calendarViewDate = newDate; // Re-assign the module's date variable
-            renderWorkoutCalendar();
-        });
-        calendarDaysGrid.addEventListener('click', (e) => {
-            const dayEl = e.target.closest('.calendar-day');
-            if (!dayEl) return;
-            const dateString = dayEl.dataset.date;
-            selectedCalendarDate = dateString;
-            if (e.target.matches('.calendar-workout-bar')) {
-                currentWorkoutDate = dateString;
-                render();
-            } else {
-                renderWorkoutCalendar();
-            }
-        });
-        createWorkoutForm.addEventListener('submit', (e) => {
-            e.preventDefault();
+        startWorkoutBtn.addEventListener('click', () => {
             const date = selectedCalendarDate;
-            const bodyweight = workoutBodyweightInput.value;
-            const category = workoutCategorySelect.value;
+            if (!date) {
+                alert("Please select a date from the calendar.");
+                return;
+            }
             if (getState().workouts.some(w => w.date === date)) {
                 alert('A workout for this date already exists.');
                 return;
             }
-            const newWorkout = { date, bodyweight, category, exercises: [], isFinished: false, startTime: Date.now() };
+            const newWorkout = {
+                date,
+                bodyweight: workoutBodyweightInput.value,
+                category: workoutCategorySelect.value,
+                exercises: [{ id: Date.now(), name: '', weight: '', sets: '', reps: '' }],
+                isFinished: false,
+                startTime: Date.now()
+            };
             getState().workouts.push(newWorkout);
-            currentWorkoutDate = date;
+            // currentWorkoutDate is set inside render() now
             saveDataToFirebase();
             render();
         });
-        prevWorkoutBtn.addEventListener('click', () => {
-            const sortedWorkouts = getState().workouts.sort((a, b) => new Date(b.date) - new Date(a.date));
-            const currentIndex = sortedWorkouts.findIndex(w => w.date === currentWorkoutDate);
-            if (currentIndex < sortedWorkouts.length - 1) {
-                const newDate = sortedWorkouts[currentIndex + 1].date;
-                selectedCalendarDate = newDate;
-                currentWorkoutDate = newDate;
-                render();
-            }
-        });
-        nextWorkoutBtn.addEventListener('click', () => {
-            const sortedWorkouts = getState().workouts.sort((a, b) => new Date(b.date) - new Date(a.date));
-            const currentIndex = sortedWorkouts.findIndex(w => w.date === currentWorkoutDate);
-            if (currentIndex > 0) {
-                const newDate = sortedWorkouts[currentIndex - 1].date;
-                selectedCalendarDate = newDate;
-                currentWorkoutDate = newDate;
-                render();
-            }
-        });
-        deleteWorkoutBtn.addEventListener('click', () => {
-            if (confirm("Are you sure you want to delete this entire workout log?")) {
-                getState().workouts = getState().workouts.filter(w => w.date !== currentWorkoutDate);
-                currentWorkoutDate = null;
-                selectedCalendarDate = getTodayDateString();
-                saveDataToFirebase();
-                render();
-            }
-        });
-        editWorkoutBtn.addEventListener('click', () => {
-            const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
-            if (workout) {
-                workout.isFinished = false;
-                saveDataToFirebase();
-                render();
-            }
-        });
-        finishWorkoutBtn.addEventListener('click', () => {
-            const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
-            if (workout) {
-                if (workoutTimerInterval) clearInterval(workoutTimerInterval);
-                if (workout.startTime && !workout.duration) {
-                    workout.duration = Date.now() - workout.startTime;
-                }
-                workout.isFinished = true;
-                saveDataToFirebase();
-                render();
-            }
-        });
-        addLogEntryForm.addEventListener('submit', (e) => {
-            e.preventDefault();
+
+        workoutLogEntries.addEventListener('click', async (e) => {
             const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
             if (!workout) return;
-            const newEntry = {
-                id: Date.now(),
-                name: searchExerciseInput.value,
-                weight: logWeightInput.value || 0,
-                sets: logSetsInput.value || 0,
-                reps: logRepsInput.value || 0,
-            };
-            if (!getState().exercises.some(ex => ex.name.toLowerCase() === newEntry.name.toLowerCase())) {
-                if(!confirm(`"${newEntry.name}" is not in your exercise list. Add it?`)) return;
-                getState().exercises.push({ id: Date.now(), name: newEntry.name, category: 'Other' });
+
+            if (e.target.matches('.add-exercise-btn')) {
+                workout.exercises.push({ id: Date.now(), name: '', weight: '', sets: '', reps: '' });
+                renderLogEntries(workout.exercises, false);
             }
-            workout.exercises.push(newEntry);
-            saveDataToFirebase();
-            renderCurrentWorkoutView();
-            addLogEntryForm.reset();
-            searchExerciseInput.focus();
-        });
-        searchExerciseInput.addEventListener('input', () => {
-            const query = searchExerciseInput.value.toLowerCase();
-            searchResultsContainer.innerHTML = '';
-            if (query.length < 1) return;
-            const filtered = getState().exercises.filter(ex => ex.name.toLowerCase().includes(query));
-            filtered.forEach(ex => {
-                const div = document.createElement('div');
-                div.textContent = ex.name;
-                div.classList.add('search-result-item');
-                div.addEventListener('click', () => {
-                    searchExerciseInput.value = ex.name;
-                    searchResultsContainer.innerHTML = '';
-                });
-                searchResultsContainer.appendChild(div);
-            });
-        });
-        searchExerciseInput.addEventListener('blur', () => {
-            setTimeout(() => {
-                if (!searchResultsContainer.matches(':hover')) {
-                    searchResultsContainer.innerHTML = '';
+
+            if (e.target.matches('.delete-log-row')) {
+                const confirmed = await showConfirmation("Are you sure you want to delete this exercise row?");
+                if (confirmed) {
+                    const row = e.target.closest('.workout-log-entry-row');
+                    const entryId = Number(row.dataset.entryId);
+                    workout.exercises = workout.exercises.filter(ex => ex.id !== entryId);
+                    saveDataToFirebase();
+                    renderLogEntries(workout.exercises, false);
                 }
-            }, 200);
+            }
         });
-        workoutLogEntries.addEventListener('click', (e) => {
-    const entryRow = e.target.closest('tr[data-entry-id]');
-    if (!entryRow) return;
 
-    const entryId = Number(entryRow.dataset.entryId);
-    const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
-    if (!workout) return;
+        deleteWorkoutBtn.addEventListener('click', async () => {
+            const confirmed = await showConfirmation("Are you sure you want to delete this entire workout log? This action cannot be undone.");
+            if (confirmed) {
+                getState().workouts = getState().workouts.filter(w => w.date !== currentWorkoutDate);
+                selectedCalendarDate = currentWorkoutDate; // Keep calendar on the day that was deleted
+                currentWorkoutDate = null;
+                render();
+                saveDataToFirebase();
+            }
+        });
+        
+        // --- Other Event Listeners ---
+        
+        // Exercise search logic
+        workoutLogEntries.addEventListener('focusin', (e) => {
+            if (e.target.matches('.inline-log-input[data-field="name"]')) {
+                activeExerciseInput = e.target;
+            }
+        });
+        workoutLogEntries.addEventListener('input', (e) => {
+            if (e.target.matches('.inline-log-input[data-field="name"]')) {
+                activeExerciseInput = e.target;
+                const query = e.target.value.toLowerCase();
+                const inputRect = activeExerciseInput.getBoundingClientRect();
+                
+                exerciseSearchResults.style.top = `${inputRect.bottom + window.scrollY}px`;
+                exerciseSearchResults.style.left = `${inputRect.left + window.scrollX}px`;
+                exerciseSearchResults.style.width = `${inputRect.width}px`;
 
-    const entry = workout.exercises.find(ex => ex.id === entryId);
-    if (!entry) return;
+                if (query.length < 1) {
+                    exerciseSearchResults.style.display = 'none';
+                    return;
+                }
+                
+                const filtered = getState().exercises.filter(ex => ex.name.toLowerCase().includes(query));
+                exerciseSearchResults.innerHTML = filtered.map(ex => `<div class="search-result-item">${ex.name}</div>`).join('');
+                exerciseSearchResults.style.display = filtered.length > 0 ? 'block' : 'none';
+            }
+        });
+        exerciseSearchResults.addEventListener('click', (e) => {
+            if (e.target.matches('.search-result-item') && activeExerciseInput) {
+                activeExerciseInput.value = e.target.textContent;
+                activeExerciseInput.dispatchEvent(new Event('blur', { bubbles: true }));
+                exerciseSearchResults.style.display = 'none';
+                activeExerciseInput = null;
+            }
+        });
 
-    // --- NEW LOGIC ---
+        // Auto-save on blur from an input
+        workoutLogEntries.addEventListener('blur', (e) => {
+            if (e.target.matches('.inline-log-input')) {
+                const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
+                if (!workout) return;
+                const row = e.target.closest('.workout-log-entry-row');
+                const entryId = Number(row.dataset.entryId);
+                const field = e.target.dataset.field;
+                const value = e.target.value;
+                const exerciseEntry = workout.exercises.find(ex => ex.id === entryId);
+                if (exerciseEntry) {
+                    exerciseEntry[field] = value;
+                    saveDataToFirebase();
+                }
+            }
+            // Hide search results on blur, with a delay to allow clicking an item
+            setTimeout(() => { if (!exerciseSearchResults.matches(':hover')) { exerciseSearchResults.style.display = 'none'; } }, 200);
+        }, true);
+        
+        // Calendar navigation
+        calendarPrevWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() - 7); render(); });
+        calendarNextWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() + 7); render(); });
+        calendarDaysGrid.addEventListener('click', (e) => {
+            const dayEl = e.target.closest('.calendar-day');
+            if (!dayEl) return;
+            selectedCalendarDate = dayEl.dataset.date;
+            workoutDateInput.value = selectedCalendarDate;
+            render();
+        });
 
-    if (e.target.matches('.icon-btn.edit')) {
-        // Toggle 'isEditing' flag and re-render
-        entry.isEditing = true;
-        renderCurrentWorkoutView();
-    } 
-    else if (e.target.matches('.icon-btn.delete')) {
-        // Find index to splice from the array
-        const entryIndex = workout.exercises.findIndex(ex => ex.id === entryId);
-        if (entryIndex > -1) {
-            workout.exercises.splice(entryIndex, 1);
-            saveDataToFirebase();
-            renderCurrentWorkoutView();
-        }
-    }
-    else if (e.target.matches('.icon-btn.save')) {
-        // Get new values from the input fields within the row
-        const newWeight = entryRow.querySelector('.inline-edit-weight').value;
-        const newSets = entryRow.querySelector('.inline-edit-sets').value;
-        const newReps = entryRow.querySelector('.inline-edit-reps').value;
-
-        // Update the entry in the state
-        entry.weight = newWeight || 0;
-        entry.sets = newSets || 0;
-        entry.reps = newReps || 0;
-        delete entry.isEditing; // Clean up the temporary flag
-
-        saveDataToFirebase();
-        renderCurrentWorkoutView();
-    }
-    else if (e.target.matches('.icon-btn.cancel')) {
-        // Simply remove the flag and re-render to discard changes
-        delete entry.isEditing;
-        renderCurrentWorkoutView();
-    }
-});
+        // Workout navigation
+        prevWorkoutBtn.addEventListener('click', () => { const sorted = getState().workouts.sort((a, b) => new Date(b.date) - new Date(a.date)); const i = sorted.findIndex(w => w.date === currentWorkoutDate); if (i < sorted.length - 1) { selectedCalendarDate = sorted[i + 1].date; render(); } });
+        nextWorkoutBtn.addEventListener('click', () => { const sorted = getState().workouts.sort((a, b) => new Date(b.date) - new Date(a.date)); const i = sorted.findIndex(w => w.date === currentWorkoutDate); if (i > 0) { selectedCalendarDate = sorted[i - 1].date; render(); } });
+        
+        editWorkoutBtn.addEventListener('click', () => { const workout = getState().workouts.find(w => w.date === currentWorkoutDate); if (workout) { workout.isFinished = false; saveDataToFirebase(); render(); } });
+        finishWorkoutBtn.addEventListener('click', () => { const workout = getState().workouts.find(w => w.date === currentWorkoutDate); if (workout) { if (workoutTimerInterval) clearInterval(workoutTimerInterval); if (workout.startTime && !workout.duration) workout.duration = Date.now() - workout.startTime; workout.isFinished = true; saveDataToFirebase(); render(); } });
         summaryCategorySelect.addEventListener('change', (e) => renderSummary(e.target.value));
-        // NEW: This is the only new code block being added.
-        workoutCategorySelect.addEventListener('change', (e) => {
-            summaryCategorySelect.value = e.target.value;
-            renderSummary(e.target.value);
-        });
+        workoutCategorySelect.addEventListener('change', (e) => { summaryCategorySelect.value = e.target.value; renderSummary(e.target.value); });
+        
         editBodyweightBtn.addEventListener('click', () => {
             const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
             if (!workout) return;
@@ -446,31 +405,15 @@ function createWorkoutModule() {
                 render();
             }
         });
-        restTimerStartBtn.addEventListener('click', () => {
-            if (restTimerInterval) clearInterval(restTimerInterval);
-            isRestTimerPaused = false;
-            restTimerElapsedTime = 0;
-            restTimerStartTime = Date.now();
-            restTimerPauseBtn.textContent = 'Pause';
-            updateRestTimerDisplay();
-            restTimerInterval = setInterval(updateRestTimerDisplay, 1000);
-        });
-        restTimerPauseBtn.addEventListener('click', () => {
-            if (isRestTimerPaused) {
-                if (restTimerElapsedTime === 0 && !restTimerStartTime) return;
-                isRestTimerPaused = false;
-                restTimerStartTime = Date.now();
-                restTimerPauseBtn.textContent = 'Pause';
-                updateRestTimerDisplay();
-                restTimerInterval = setInterval(updateRestTimerDisplay, 1000);
-            } else {
-                if (restTimerInterval) clearInterval(restTimerInterval);
-                restTimerElapsedTime += Date.now() - restTimerStartTime;
-                isRestTimerPaused = true;
-                restTimerPauseBtn.textContent = 'Resume';
-            }
-        });
+        
+        // Rest Timer
+        restTimerStartBtn.addEventListener('click', () => { if (restTimerInterval) clearInterval(restTimerInterval); isRestTimerPaused = false; restTimerElapsedTime = 0; restTimerStartTime = Date.now(); restTimerPauseBtn.textContent = 'Pause'; updateRestTimerDisplay(); restTimerInterval = setInterval(updateRestTimerDisplay, 1000); });
+        restTimerPauseBtn.addEventListener('click', () => { if (isRestTimerPaused) { if (restTimerElapsedTime === 0 && !restTimerStartTime) return; isRestTimerPaused = false; restTimerStartTime = Date.now(); restTimerPauseBtn.textContent = 'Pause'; updateRestTimerDisplay(); restTimerInterval = setInterval(updateRestTimerDisplay, 1000); } else { if (restTimerInterval) clearInterval(restTimerInterval); restTimerElapsedTime += Date.now() - restTimerStartTime; isRestTimerPaused = true; restTimerPauseBtn.textContent = 'Resume'; } });
     }
+
+
+    // --- 5. INITIALIZATION ---
+    
     function init(api) {
         db = api.db;
         getState = api.getState;
@@ -479,12 +422,17 @@ function createWorkoutModule() {
         getTodayDateString = api.getTodayDateString;
         sanitizeNameForId = api.sanitizeNameForId;
         formatDate = api.formatDate;
-        let categoryOptions = '';
-        CATEGORIES.forEach(cat => categoryOptions += `<option value="${cat}">${cat}</option>`);
-        workoutCategorySelect.innerHTML = categoryOptions;
-        summaryCategorySelect.innerHTML = categoryOptions;
+        showConfirmation = api.showConfirmation; // Grab the new function from the API
+
+        selectedCalendarDate = getTodayDateString();
+        workoutDateInput.value = selectedCalendarDate;
+        
+        workoutCategorySelect.innerHTML = CATEGORIES.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+        summaryCategorySelect.innerHTML = CATEGORIES.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+        
         renderSummary(summaryCategorySelect.value);
         bindEvents();
     }
+
     return { init, render };
 }
