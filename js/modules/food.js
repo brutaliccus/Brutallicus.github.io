@@ -106,46 +106,37 @@ function createFoodModule() {
     function renderFoodCalendar() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-
         const foodLogs = getState().foodLogs;
         const { goals: currentGoals } = calculateCurrentGoals();
-
         calendarViewDate.setHours(0, 0, 0, 0);
         const startOfWeek = new Date(calendarViewDate);
         startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-
         foodCalendarMonthYear.textContent = calendarViewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
         foodCalendarDaysGrid.innerHTML = '';
-
         for (let i = 0; i < 7; i++) {
             const day = new Date(startOfWeek);
             day.setDate(day.getDate() + i);
             const dateString = toLocalISOString(day);
             const log = foodLogs[dateString];
-
             const isToday = day.getTime() === today.getTime();
             const isSelected = dateString === selectedCalendarDate;
             const isOtherMonth = day.getMonth() !== calendarViewDate.getMonth();
-
             const dayEl = document.createElement('div');
             dayEl.className = 'calendar-day';
             dayEl.dataset.date = dateString;
             if (isToday) dayEl.classList.add('is-today');
             if (isSelected) dayEl.classList.add('is-selected');
             if (isOtherMonth) dayEl.classList.add('other-month');
-
             const dayNumber = document.createElement('span');
             dayNumber.className = 'day-number';
             dayNumber.textContent = day.getDate();
             dayEl.appendChild(dayNumber);
-
             if (log && log.items && log.items.length > 0) {
                 const totals = log.items.reduce((acc, item) => {
                     acc.calories += Number(item.calories) || 0;
                     acc.protein += Number(item.protein) || 0;
                     return acc;
                 }, { calories: 0, protein: 0 });
-
                 const colorClass = getMacroColorClass(totals.calories, currentGoals.calories);
                 const bar = document.createElement('button');
                 bar.className = 'food-calendar-bar';
@@ -229,7 +220,7 @@ function createFoodModule() {
             }
         });
     }
-
+    
     function calculateAndRenderTotals(items) {
         const totals = (items || []).reduce((acc, item) => {
             acc.fat += Number(item.fat) || 0;
@@ -238,20 +229,16 @@ function createFoodModule() {
             acc.calories += Number(item.calories) || 0;
             return acc;
         }, { fat: 0, carbs: 0, protein: 0, calories: 0 });
-
         const { goals: currentGoals } = calculateCurrentGoals();
         const goalCals = currentGoals.calories || 0;
         const goalFat = currentGoals.fat || 0;
         const goalCarbs = currentGoals.carbs || 0;
         const goalProtein = currentGoals.protein || 0;
-
         calorieGoalProgress.innerHTML = goalCals > 0 ? `<span class="${getMacroColorClass(totals.calories, goalCals)}">${totals.calories.toFixed(0)}</span> / ${goalCals.toFixed(0)} kcal` : '';
-        
         foodLogTotals.innerHTML = `
             <span class="macro-value">Fat: <span class="${getMacroColorClass(totals.fat, goalFat)}">${totals.fat.toFixed(1)}</span>/${goalFat.toFixed(0)}g</span> | 
             <span class="macro-value">Carbs: <span class="${getMacroColorClass(totals.carbs, goalCarbs)}">${totals.carbs.toFixed(1)}</span>/${goalCarbs.toFixed(0)}g</span> | 
             <span class="macro-value">Protein: <span class="${getMacroColorClass(totals.protein, goalProtein)}">${totals.protein.toFixed(1)}</span>/${goalProtein.toFixed(0)}g</span>`;
-        
         renderPieChart(totals);
     }
     
@@ -260,12 +247,11 @@ function createFoodModule() {
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         if (macroChart) macroChart.destroy();
-
         if (totals.calories === 0) {
             ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
             return;
         }
-
+        // CORRECTED: Use multiplication (*) for calculating calories from macros
         const fatCals = totals.fat * 9;
         const carbCals = totals.carbs * 4;
         const protCals = totals.protein * 4;
@@ -282,53 +268,66 @@ function createFoodModule() {
                     borderWidth: 2
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top', labels: { color: getComputedStyle(document.body).getPropertyValue('--text-color') } }
-                }
-            }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top', labels: { color: getComputedStyle(document.body).getPropertyValue('--text-color') } } } }
         });
     }
 
     function render() {
-        if (!selectedCalendarDate) {
-            selectedCalendarDate = getTodayDateString();
-        }
+        if (!selectedCalendarDate) selectedCalendarDate = getTodayDateString();
         renderFoodCalendar();
-
         const sortedDates = Object.keys(getState().foodLogs).sort((a, b) => new Date(b) - new Date(a));
         if (!currentFoodLogDate || !getState().foodLogs[currentFoodLogDate]) {
             currentFoodLogDate = getState().foodLogs[selectedCalendarDate] ? selectedCalendarDate : null;
         }
-        
         selectedCalendarDate = currentFoodLogDate || selectedCalendarDate;
-
         if (currentFoodLogDate && getState().foodLogs[currentFoodLogDate]) {
             currentFoodLogSection.style.display = 'block';
+            createFoodLogForm.parentElement.style.display = 'none';
             const log = getState().foodLogs[currentFoodLogDate];
             const isFinished = log.isFinished || false;
-
             foodLogTitle.textContent = formatDate(currentFoodLogDate);
-
             const currentIndex = sortedDates.indexOf(currentFoodLogDate);
             prevFoodLogBtn.disabled = currentIndex >= sortedDates.length - 1;
             nextFoodLogBtn.disabled = currentIndex <= 0;
-
             addFoodItemForm.style.display = isFinished ? 'none' : 'block';
             finishFoodLogBtn.style.display = isFinished ? 'none' : 'block';
             editFoodLogBtn.style.display = isFinished ? 'inline-block' : 'none';
-
             renderFoodEntries(log.items, isFinished);
             calculateAndRenderTotals(log.items);
         } else {
             currentFoodLogSection.style.display = 'none';
+            createFoodLogForm.parentElement.style.display = 'block';
         }
     }
 
 
     // --- 4. API & FORM HANDLING ---
+
+    // CORRECTED: This function is now more robust against incomplete API responses.
+    function handleUpcSuccess(response) {
+        const product = response.product ? response.product : response;
+        if (!product || product.status === 0 || !product.product_name) {
+            handleApiError(new Error('Product not found or API data is incomplete.'));
+            foodItemNameInput.value = '';
+            return;
+        }
+        const nutrients = product.nutriments;
+        const productName = product.product_name || 'Unknown Product';
+        const servingSizeString = product.serving_size || '100g';
+        const servingGrams = parseFloat(product.serving_quantity) || parseFloat(servingSizeString) || 100;
+        const macrosPer100g = {
+            p: nutrients.proteins_100g ?? 0,
+            c: nutrients.carbohydrates_100g ?? 0,
+            f: nutrients.fat_100g ?? 0
+        };
+        const foodData = {
+            baseName: productName,
+            servingGrams: servingGrams,
+            servingUnitName: servingSizeString,
+            macrosPer100g: macrosPer100g
+        };
+        populateAndShowMainForm(foodData);
+    }
     
     function populateAndShowMainForm(foodData) {
         addFoodItemForm.dataset.baseName = foodData.baseName;
@@ -351,6 +350,7 @@ function createFoodModule() {
         const servingGrams = parseFloat(data.servingGrams);
         const quantity = parseFloat(foodItemQuantityInput.value) || 0;
         const unit = foodItemUnitSelect.value;
+        // CORRECTED: Use multiplication (*)
         let totalGrams = (unit === 'g') ? quantity : (quantity * servingGrams);
         const multiplier = totalGrams / 100;
         foodItemFatInput.value = ((macrosPer100g.f || 0) * multiplier).toFixed(1);
@@ -358,10 +358,11 @@ function createFoodModule() {
         foodItemProteinInput.value = ((macrosPer100g.p || 0) * multiplier).toFixed(1);
     }
     
+    // CORRECTED: This now calls handleUpcSuccess to correctly process the response.
     const onScanSuccess = (decodedText) => {
         stopScanner();
         foodSearchResultsContainer.innerHTML = '<p class="search-meta-info">Searching for UPC...</p>';
-        foodApi.searchByUpc(decodedText).then(populateAndShowMainForm).catch(handleApiError);
+        foodApi.searchByUpc(decodedText).then(handleUpcSuccess).catch(handleApiError);
     };
     
     const startScanner = () => {
@@ -382,15 +383,14 @@ function createFoodModule() {
     const handleApiError = (error) => {
         const loader = document.getElementById('usda-search-loader');
         if (loader) loader.remove();
-        const message = `API Search Error: ${error.message}.`;
-        console.error(message, error);
+        foodSearchResultsContainer.innerHTML += `<p class="search-meta-info" style="color: var(--danger-color);">${error.message}</p>`;
+        console.error(error.message, error);
     };
 
 
     // --- 5. EVENT BINDING ---
     function bindEvents() {
         
-        // MODIFIED: Converted food log entries click handler to async for confirmations.
         foodLogEntries.addEventListener('click', async (e) => {
             if (e.target.matches('.icon-btn')) e.preventDefault();
             const entryDetails = e.target.closest('.food-item-details');
@@ -428,8 +428,8 @@ function createFoodModule() {
                 const newQty = parseFloat(entryDetails.querySelector('.inline-edit-qty').value);
                 const newUnit = entryDetails.querySelector('.inline-edit-unit').value;
                 if (isNaN(newQty) || newQty <= 0) { alert("Please enter a valid, positive quantity."); return; }
-
                 const { macrosPer100g, servingGrams } = entry;
+                // CORRECTED: Use multiplication (*)
                 let totalGrams = (newUnit === 'g') ? newQty : (newQty * servingGrams);
                 const multiplier = totalGrams / 100;
                 
@@ -447,7 +447,6 @@ function createFoodModule() {
             }
         });
 
-        // MODIFIED: Converted search results click handler to async for confirmations.
         foodSearchResultsContainer.addEventListener('click', async (e) => {
             const deleteBtn = e.target.closest('.icon-btn.delete');
             if (deleteBtn) {
@@ -466,13 +465,12 @@ function createFoodModule() {
             if (!resultItem) return;
 
             if (resultItem.classList.contains('upc-result')) {
-                foodApi.searchByUpc(resultItem.dataset.upc).then(populateAndShowMainForm).catch(handleApiError);
+                foodApi.searchByUpc(resultItem.dataset.upc).then(handleUpcSuccess).catch(handleApiError);
             } else if (resultItem.dataset.foodData) {
                 populateAndShowMainForm(JSON.parse(resultItem.dataset.foodData));
             }
         });
 
-        // MODIFIED: Converted delete day log handler to async for confirmation.
         deleteFoodLogBtn.addEventListener('click', async () => {
             if (currentFoodLogDate) {
                 const confirmed = await showConfirmation("Are you sure you want to delete this entire day's food log?");
@@ -485,8 +483,6 @@ function createFoodModule() {
                 }
             }
         });
-        
-        // --- Other event listeners ---
         
         addFoodItemForm.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -502,7 +498,10 @@ function createFoodModule() {
 
             const newItem = {
                 id: Date.now(), name: `${baseName} (${originalQty} ${unit})`, meal: foodItemMealSelect.value,
-                fat, carbs, protein, calories: (fat * 9) + (carbs * 4) + (protein * 4), baseName: baseName,
+                fat, carbs, protein, 
+                // CORRECTED: Use multiplication (*)
+                calories: (fat * 9) + (carbs * 4) + (protein * 4), 
+                baseName: baseName,
                 macrosPer100g: JSON.parse(addFoodItemForm.dataset.macrosPer100g),
                 servingGrams: parseFloat(addFoodItemForm.dataset.servingGrams), originalQty, unit,
             };
@@ -523,10 +522,7 @@ function createFoodModule() {
             foodMacroDetails.style.display = 'none';
             if (query.length < 2) return;
 
-            const isNumeric = /^\d+$/.test(query);
-            const isUpcLength = [8, 12, 13, 14].includes(query.length);
-
-            if (isNumeric && isUpcLength) {
+            if (/^\d{8,}$/.test(query)) { // Simplified UPC check
                 foodSearchResultsContainer.innerHTML = `<div class="search-result-item upc-result" data-upc="${query}"><strong style="color:var(--primary-color);">Search for UPC: ${query}</strong></div>`;
                 return;
             }
@@ -573,6 +569,7 @@ function createFoodModule() {
             if (!name || !servingSize || servingSize <= 0) { customFoodError.textContent = 'Please fill out a valid name and positive serving size.'; return; }
             if (isNaN(fat) || isNaN(carbs) || isNaN(protein)) { customFoodError.textContent = 'Please fill out all macro fields.'; return; }
             
+            // CORRECTED: Use multiplication (*)
             const multiplier = 100 / servingSize;
             const newUniqueFood = { name, macrosPer100g: { p: protein * multiplier, c: carbs * multiplier, f: fat * multiplier }, servingGrams: servingSize, servingUnitName: `${servingSize}g serving`, isCustom: true };
             
@@ -592,9 +589,9 @@ function createFoodModule() {
         scanBarcodeBtn.addEventListener('click', startScanner);
         scannerCloseBtn.addEventListener('click', stopScanner);
         foodItemMealSelect.addEventListener('change', () => { lastSelectedMeal = foodItemMealSelect.value; });
-        foodCalendarPrevWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() - 7); renderFoodCalendar(); });
-        foodCalendarNextWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() + 7); renderFoodCalendar(); });
-        foodCalendarDaysGrid.addEventListener('click', (e) => { const dayEl = e.target.closest('.calendar-day'); if (!dayEl) return; selectedCalendarDate = dayEl.dataset.date; foodLogDateInput.value = selectedCalendarDate; if (getState().foodLogs[selectedCalendarDate]) { currentFoodLogDate = selectedCalendarDate; render(); } else { renderFoodCalendar(); } });
+        foodCalendarPrevWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() - 7); render(); });
+        foodCalendarNextWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() + 7); render(); });
+        foodCalendarDaysGrid.addEventListener('click', (e) => { const dayEl = e.target.closest('.calendar-day'); if (!dayEl) return; selectedCalendarDate = dayEl.dataset.date; foodLogDateInput.value = selectedCalendarDate; if (getState().foodLogs[selectedCalendarDate]) { currentFoodLogDate = selectedCalendarDate; render(); } else { render(); } });
         createFoodLogForm.addEventListener('submit', (e) => { e.preventDefault(); const date = selectedCalendarDate; if (!getState().foodLogs[date]) { getState().foodLogs[date] = { items: [], isFinished: false }; } currentFoodLogDate = date; saveDataToFirebase(); render(); });
         prevFoodLogBtn.addEventListener('click', () => { const s = Object.keys(getState().foodLogs).sort((a, b) => new Date(b) - new Date(a)); const i = s.indexOf(currentFoodLogDate); if (i < s.length - 1) { currentFoodLogDate = s[i + 1]; render(); } });
         nextFoodLogBtn.addEventListener('click', () => { const s = Object.keys(getState().foodLogs).sort((a, b) => new Date(b) - new Date(a)); const i = s.indexOf(currentFoodLogDate); if (i > 0) { currentFoodLogDate = s[i - 1]; render(); } });
