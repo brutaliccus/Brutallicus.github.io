@@ -49,7 +49,6 @@
             <p id="auth-error" class="auth-error"></p>
         </div>
     </div>
-
     <!-- Main App Container -->
     <div id="app-container" style="display: none;">
         <header>
@@ -83,11 +82,11 @@
             <nav id="tab-nav">
                 <button class="tab-button" data-tab="tab-workout-log">Workout Log</button>
                 <button class="tab-button" data-tab="tab-food-log">Food Log</button>
+                <button class="tab-button" data-tab="tab-programs">Programs</button>
                 <button class="tab-button" data-tab="tab-personal-records">Personal Records</button>
                 <button class="tab-button" data-tab="tab-my-progress">My Progress</button>
             </nav>
         </header>
-
         <main>
             <div id="tab-workout-log" class="tab-content">
                 <div class="workout-log-layout">
@@ -152,29 +151,9 @@
                                     <button id="next-workout-btn" class="nav-arrow" title="Next Workout">&#9654;</button>
                                 </div>
                             </div>
-                            <form id="add-log-entry-form">
-                                <div class="form-group" style="position: relative;">
-                                    <label for="search-exercise-input">Add Exercise</label>
-                                    <input type="text" id="search-exercise-input" placeholder="Start typing..." autocomplete="off">
-                                    <div id="search-results-container"></div>
-                                </div>
-                                <div class="log-inputs">
-                                    <div class="form-group">
-                                        <label for="log-weight">Weight (lbs)</label>
-                                        <input type="number" id="log-weight" step="0.1" placeholder="0">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="log-sets">Sets</label>
-                                        <input type="number" id="log-sets" placeholder="3">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="log-reps">Reps</label>
-                                        <input type="number" id="log-reps" placeholder="8">
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn-primary">Add to Workout</button>
-                            </form>
+                            <!-- The old static form is removed, this div is the target for dynamic rendering -->
                             <div id="workout-log-entries"></div>
+                            <div id="workout-exercise-search-results" class="search-results-container" style="display: none;"></div>
                             <div id="workout-controls" class="workout-controls">
                                 <button id="finish-workout-btn" class="btn-primary">Finish Workout</button>
                             </div>
@@ -424,27 +403,35 @@
                     </div>
                 </div>
             </div>
+            <div id="tab-programs" class="tab-content"></div>
+	    <div id="confirmation-modal" class="modal-overlay">
+	        <div class="modal-content">
+	            <h3 id="confirmation-title">Are you sure?</h3>
+	            <p id="confirmation-message">This action cannot be undone.</p>
+	            <div class="form-actions" style="justify-content: flex-end; margin-top: 1.5rem;">
+	                <button id="confirmation-cancel-btn" class="btn-secondary">Cancel</button>
+	                <button id="confirmation-confirm-btn" class="btn-primary" data-danger="true">Confirm</button>
+	            </div>
+	        </div>
+	    </div>
         </main>
     </div>
-
+    <datalist id="exercise-list-data"></datalist>
     <div id="scanner-modal" class="modal-overlay">
         <div class="modal-content">
             <div id="barcode-reader"></div>
             <button id="scanner-close-btn" class="btn-secondary">Close</button>
         </div>
     </div>
-
     <div id="custom-food-modal" class="modal-overlay">
         <div class="modal-content">
             <form id="custom-food-form">
                 <h2>New Custom Food</h2>
                 <p>Define the nutrition facts for a single serving of your food.</p>
-                
                 <div class="form-group">
                     <label for="custom-food-name">Food Name</label>
                     <input type="text" id="custom-food-name" required placeholder="e.g., My Protein Powder">
                 </div>
-
                 <div class="form-row">
                     <div class="form-group">
                         <label for="custom-serving-size">Serving Size</label>
@@ -455,10 +442,8 @@
                         <input type="text" id="custom-serving-unit" value="g" readonly>
                     </div>
                 </div>
-
                 <hr>
                 <p><strong>Macros per serving:</strong></p>
-
                 <div class="form-row">
                     <div class="form-group">
                         <label for="custom-fat">Fat (g)</label>
@@ -473,7 +458,6 @@
                         <input type="number" id="custom-protein" step="0.1" required placeholder="e.g., 24">
                     </div>
                 </div>
-
                 <div class="form-actions">
                     <button type="submit" class="btn-primary">Save Custom Food</button>
                     <button type="button" id="custom-food-modal-close-btn" class="btn-secondary">Cancel</button>
@@ -482,10 +466,10 @@
             </form>
         </div>
     </div>
-    
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="predefined-exercises.js"></script>
+    <script src="training-programs.js" defer></script>
     <script src="js/modules/workout.js" defer></script>
     <script src="js/modules/exercises.js" defer></script>
     <script src="js/modules/food.js" defer></script>
@@ -493,7 +477,7 @@
     <script src="js/modules/profile.js" defer></script>
     <script src="js/modules/progress.js" defer></script>
     <script src="js/modules/userAdmin.js" defer></script>
-    <!-- NOTE: app.js must be last to ensure all module factory functions are defined before it runs -->
+    <script src="js/modules/programs.js" defer></script>
     <script src="js/app.js" defer></script>
 </body>
 </html>
