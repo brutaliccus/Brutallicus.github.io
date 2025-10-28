@@ -1133,3 +1133,148 @@ body:not(.theme-dark) .pr-metric.metric-heavy-lift .pr-metric-value {
 #confirmation-confirm-btn[data-danger="true"] {
     background-color: var(--danger-color);
 }
+/* The main container for a single exercise and its sets */
+.exercise-card {
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* Header within the card holding the exercise name and action buttons */
+.exercise-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.exercise-header h4 {
+    margin: 0;
+    font-size: 1.5em;
+}
+
+/* Container for the pencil/trash icons */
+.exercise-header .actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* The list of all sets for an exercise */
+.set-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* A single set row */
+.set-row {
+    display: grid;
+    grid-template-columns: 2fr 2fr 1fr; /* Weight, Reps, Done Checkbox */
+    gap: 1rem;
+    align-items: center;
+    padding-left: 1.5rem; /* Indent sets under the exercise */
+    position: relative;
+}
+
+/* A small number for the set (1, 2, 3, etc.) */
+.set-number {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.9em;
+    font-weight: bold;
+    color: var(--secondary-color);
+}
+
+/* Header row for "Weight", "Reps" */
+.set-row-header {
+    font-size: 0.8em;
+    font-weight: bold;
+    color: var(--secondary-color);
+    padding-left: 1.5rem;
+    margin-bottom: 0.5rem;
+    display: grid;
+    grid-template-columns: 2fr 2fr 1fr;
+    gap: 1rem;
+}
+
+/* The new +/- stepper input component */
+.stepper-input {
+    display: flex;
+    align-items: center;
+}
+
+.stepper-input input[type="number"] {
+    text-align: center;
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+    padding: 0.75rem 0.25rem;
+    font-size: 1.1em;
+    /* Hide the default browser spinners */
+    -moz-appearance: textfield;
+}
+.stepper-input input::-webkit-outer-spin-button,
+.stepper-input input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.stepper-btn {
+    width: 44px;
+    height: 44px; /* Matches input padding + font size */
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 0;
+    line-height: 44px;
+}
+.stepper-btn:hover {
+    background-color: var(--secondary-color);
+    color: var(--text-color-light);
+}
+.stepper-btn.minus { border-radius: 4px 0 0 4px; }
+.stepper-btn.plus { border-radius: 0 4px 4px 0; }
+
+
+/* The smaller green '+' button for adding a new set */
+.add-set-btn-container {
+    padding-left: 1.5rem; /* Align with sets */
+    margin-top: 1rem;
+}
+
+.add-set-btn {
+    background-color: var(--success-color);
+    color: var(--text-color-light);
+    border: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    font-size: 1.8rem;
+    font-weight: 300;
+    line-height: 38px;
+    padding: 0;
+    cursor: pointer;
+    opacity: 0.85;
+    transition: all 0.2s;
+}
+.add-set-btn:hover {
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+/* The "Done" button for an entire exercise block */
+.exercise-done-btn-container {
+    text-align: right;
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+}
