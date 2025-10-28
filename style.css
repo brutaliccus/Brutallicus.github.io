@@ -1320,3 +1320,65 @@ body:not(.theme-dark) .pr-metric.metric-heavy-lift .pr-metric-value {
     padding: 0.4rem 0.8rem;
     font-size: 0.9em;
 }
+/* --- PERSONAL RECORDS V3 - CATEGORY BOX LAYOUT --- */
+
+/* The main container for a whole category (e.g., "Push") */
+.pr-category-group {
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 12px; /* Slightly larger radius for the main container */
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+body.theme-dark .pr-category-group {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* The category title (e.g., H2 for "Push") */
+.pr-category-group h2 {
+    font-size: 1.8em;
+    margin: 0 0 1.5rem 0;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+
+/* The grid for exercise cards within a category */
+.pr-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); /* Slightly wider cards */
+    gap: 1.5rem;
+}
+
+/* Style for the individual exercise cards (e.g., "Bench Press") */
+.pr-layout .card {
+    margin-bottom: 0; /* Let the grid gap handle spacing */
+    /* Make the card background contrast with the category group background */
+    background-color: var(--background-color); 
+    transition: transform 0.2s ease-in-out;
+}
+
+.pr-layout .card:hover {
+    transform: translateY(-5px);
+}
+
+/* These rules from before are still needed for the inside of the card */
+.pr-layout .card h4 {
+    font-size: 1.5em;
+    margin-bottom: 1.25rem;
+    text-align: center;
+}
+.pr-card-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.pr-metric {
+    /* Use a slightly different background for contrast */
+    background-color: color-mix(in srgb, var(--background-color) 50%, var(--card-background) 50%);
+    padding: 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+/* All the coloring and value/label styles remain the same */
