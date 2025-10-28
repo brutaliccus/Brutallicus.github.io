@@ -1,4 +1,4 @@
-// js/modules/workout.js (V6 - Manual First Set Add)
+// js/modules/workout.js (V7 - Smart Set Grouping in Summary)
 function createWorkoutModule() {
     // --- 1. MODULE SCOPE & REFERENCES ---
     let db, getState, saveDataToFirebase, getTodayDateString, formatDate, showConfirmation;
@@ -68,6 +68,36 @@ function createWorkoutModule() {
         const totalTime = restTimerElapsedTime + currentSegmentTime;
         restTimerDisplay.textContent = formatRestTime(totalTime);
     };
+
+    /**
+     * NEW: Groups identical sets into a readable summary string.
+     * @param {Array} sets - The array of set objects.
+     * @returns {string} An HTML string summarizing the sets.
+     */
+    function createSetsSummaryString(sets) {
+        if (!sets || sets.length === 0) return 'No sets logged';
+
+        const setGroups = new Map();
+        sets.forEach(set => {
+            const weight = set.weight || 0;
+            const reps = set.reps || 0;
+            const key = `${weight}-${reps}`;
+            
+            if (!setGroups.has(key)) {
+                setGroups.set(key, { count: 0, weight, reps });
+            }
+            setGroups.get(key).count++;
+        });
+
+        const summaryParts = [];
+        for (const group of setGroups.values()) {
+            const { count, weight, reps } = group;
+            const plural = count > 1 ? 'sets' : 'set';
+            summaryParts.push(`${count} ${plural} of ${reps} x ${weight}lbs`);
+        }
+
+        return summaryParts.join('<br>'); // Use line breaks for readability
+    }
 
     // --- 3. DATA MIGRATION ---
     function migrateExerciseData(exercises) {
@@ -177,6 +207,10 @@ function createWorkoutModule() {
         renderLogEntries();
     }
     
+    /**
+     * MODIFIED: This function now uses the createSetsSummaryString helper
+     * to group sets for a cleaner display.
+     */
     function renderSummary(category) {
         const today = getTodayDateString();
         const lastWorkout = getState().workouts.filter(w => w.category === category && w.date !== today).sort((a, b) => new Date(b.date) - new Date(a.date))[0];
@@ -189,7 +223,7 @@ function createWorkoutModule() {
         if (exercisesToRender.length > 0) {
             summaryHTML += '<table class="log-table"><thead><tr><th>Exercise</th><th>Sets</th></tr></thead><tbody>';
             exercisesToRender.forEach(ex => {
-                const setsSummary = ex.sets.map(s => `${s.reps} x ${s.weight}lbs`).join(', ');
+                const setsSummary = createSetsSummaryString(ex.sets);
                 summaryHTML += `<tr><td>${ex.name}</td><td>${setsSummary}</td></tr>`;
             });
             summaryHTML += '</tbody></table>';
@@ -263,6 +297,7 @@ function createWorkoutModule() {
             const exerciseId = Number(exerciseCard.dataset.exerciseId);
             const exercise = workout.exercises.find(ex => ex.id === exerciseId);
             if (!exercise) return;
+
             if (e.target.matches('.add-set-btn')) {
                 const lastSet = exercise.sets[exercise.sets.length - 1];
                 exercise.sets.push({ id: Date.now(), weight: lastSet ? lastSet.weight : '', reps: lastSet ? lastSet.reps : '' });
@@ -341,11 +376,9 @@ function createWorkoutModule() {
                      const exerciseCard = e.target.closest('.exercise-card');
                      const exerciseId = Number(exerciseCard.dataset.exerciseId);
                      const exercise = workout.exercises.find(ex => ex.id === exerciseId);
-                     if (exercise) {
-                         if (!exercise.name.trim()) {
-                             workout.exercises = workout.exercises.filter(ex => ex.id !== exerciseId);
-                         }
-                         renderLogEntries(); // Re-render to show the name as a header or remove the card
+                     if (exercise && !exercise.name.trim()) {
+                         workout.exercises = workout.exercises.filter(ex => ex.id !== exerciseId);
+                         renderLogEntries();
                      }
                  }, 200);
              }
@@ -360,9 +393,8 @@ function createWorkoutModule() {
                 const exercise = workout.exercises.find(ex => ex.id === exerciseId);
                 if (exercise) {
                     exercise.name = newName;
-                    // CORRECTED: Do NOT add a set automatically.
                     saveDataToFirebase();
-                    renderLogEntries(); // Just re-render to show the name and the "add set" button.
+                    renderLogEntries();
                 }
                 exerciseSearchResults.style.display = 'none';
                 activeExerciseInput = null;
