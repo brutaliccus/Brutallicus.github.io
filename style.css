@@ -272,7 +272,6 @@ button {
 .log-table th, .log-table td { text-align: left; padding: 0.75rem; border-bottom: 1px solid var(--border-color); }
 .log-table th { color: var(--secondary-color); font-size: 0.9em; }
 .workout-controls { margin-top: 1.5rem; text-align: right; }
-
 /* --- Food Log Specific Styles --- */
 .food-log-display-layout {
     display: grid;
@@ -299,15 +298,6 @@ button {
     .food-log-display-layout { grid-template-columns: 1fr; }
     .totals-display { position: static; }
 }
-/* --- Personal Records Tab Styles --- */
-.pr-layout {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    align-items: flex-start;
-}
-.pr-layout .card { width: 100%; box-sizing: border-box; }
-@media (max-width: 768px) { .pr-layout { grid-template-columns: 1fr; } }
 /* --- My Progress Tab Styles --- */
 .progress-charts-layout {
     display: grid;
@@ -355,7 +345,6 @@ button {
 /* Manage Exercises List Styles */
 .exercise-item { display: flex; justify-content: space-between; align-items: center; }
 .exercise-item .actions { display: flex; gap: 0.5rem; }
-
 /* --- Additions for Food Search UX --- */
 .search-results-header {
     padding: 0.5rem 0.75rem 0.25rem;
@@ -370,7 +359,7 @@ button {
 }
 #food-search-results-container h6:first-child {
     border-top: none;
-    margin-top: -1px; 
+    margin-top: -1px;
 }
 .search-meta-info {
     padding: 0.75rem;
@@ -383,9 +372,8 @@ button {
     border-top: 1px dashed var(--border-color);
     padding-top: 1rem;
     margin-top: 1rem;
-    display: none; 
+    display: none;
 }
-
 /* --- Additions for In-Line Workout Editing --- */
 .log-table tr.edit-mode {
     background-color: color-mix(in srgb, var(--primary-color) 10%, var(--card-background));
@@ -401,10 +389,10 @@ button {
     border-radius: 4px;
 }
 .log-table .actions-cell .icon-btn {
-    font-size: 1.5rem; 
+    font-size: 1.5rem;
 }
 .log-table .icon-btn.save:hover {
-    color: #2a9d8f; 
+    color: #2a9d8f;
 }
 .log-table .icon-btn.cancel:hover {
     color: var(--danger-color);
@@ -421,7 +409,17 @@ button {
     overflow-y: auto;
     z-index: 100;
 }
-
+.search-results-container {
+    position: absolute;
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000; /* Ensure it's on top */
+}
 /* --- Additions for Manage Exercises Layout --- */
 #exercise-list-layout {
     display: grid;
@@ -429,7 +427,7 @@ button {
     gap: 1.5rem;
 }
 .exercise-category-card {
-    margin-bottom: 0; 
+    margin-bottom: 0;
 }
 .exercise-category-card .exercise-item:not(:last-child) {
     border-bottom: 1px solid var(--border-color);
@@ -437,23 +435,21 @@ button {
 .exercise-category-card .exercise-item {
     padding: 0.75rem 0;
 }
-
 /* --- Additions for Create Workout Form Layout --- */
 .form-inline-group {
     display: flex;
-    flex-wrap: wrap; 
+    flex-wrap: wrap;
     gap: 1rem;
-    align-items: flex-end; 
+    align-items: flex-end;
 }
 .form-inline-group .form-group {
-    margin-bottom: 0; 
-    flex-grow: 1; 
-    flex-basis: 200px; 
+    margin-bottom: 0;
+    flex-grow: 1;
+    flex-basis: 200px;
 }
 .form-inline-group button {
-    flex-shrink: 0; 
+    flex-shrink: 0;
 }
-
 /* --- Definitive Fix for Workout Header Alignment --- */
 .workout-header {
     display: flex;
@@ -462,23 +458,23 @@ button {
     gap: 1rem;
 }
 .workout-title-group {
-    flex-grow: 1; 
+    flex-grow: 1;
     text-align: center;
 }
 .workout-header-actions {
     display: flex;
     align-items: center;
-    gap: 0.5rem; 
+    gap: 0.5rem;
     flex-shrink: 0;
 }
 .bodyweight-display {
     padding: 0.5rem 0 0 0;
-    margin-bottom: 0; 
+    margin-bottom: 0;
     font-size: 1rem;
     color: var(--secondary-color);
 }
 .workout-header .nav-arrow {
-   width: auto; 
+   width: auto;
    flex-shrink: 0;
 }
 .log-table .actions-cell {
@@ -486,7 +482,6 @@ button {
     white-space: nowrap;
     text-align: right;
 }
-
 /* --- Macro and Calorie Goal Color Coding --- */
 .totals-display .macro-value {
     padding: 0 0.25em;
@@ -518,7 +513,6 @@ button {
 #calorie-goal-progress .calories-consumed {
     color: inherit;
 }
-
 /* --- Admin User List Styles --- */
 .status-indicator {
     display: inline-block;
@@ -536,13 +530,12 @@ button {
 .icon-btn.reset-pin:hover {
     color: var(--primary-color);
 }
-
 /* --- Barcode Scanner Styles --- */
 .input-with-icon {
     position: relative;
 }
 #food-item-name {
-    padding-right: 50px; 
+    padding-right: 50px;
 }
 #scan-barcode-btn {
     position: absolute;
@@ -579,7 +572,7 @@ body.theme-dark #scan-barcode-btn {
     width: 100%;
     height: 100%;
     background-color: rgba(0, 0, 0, 0.7);
-    display: none; 
+    display: none;
     justify-content: center;
     align-items: center;
     z-index: 1000;
@@ -597,27 +590,23 @@ body.theme-dark #scan-barcode-btn {
     border: 1px solid var(--border-color);
     margin-bottom: 1rem;
 }
-
 /* --- REFINED CALENDAR STYLES (SOFTER & SPACED) --- */
 #workout-calendar-container {
     padding: 15px;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 15px;
 }
-
 .calendar-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
 }
-
 .calendar-header h4 {
     margin: 0;
     color: var(--text-color);
     font-size: 1.1em;
 }
-
 .calendar-days-header {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -625,19 +614,16 @@ body.theme-dark #scan-barcode-btn {
     margin-bottom: 5px;
     padding: 0 4px; /* Align with the new gap */
 }
-
 .calendar-days-header div {
     font-weight: bold;
     font-size: 0.8em;
     color: var(--secondary-color);
 }
-
 .calendar-days-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     gap: 4px; /* This creates the padding/space between days */
 }
-
 .calendar-day {
     padding: 4px;
     cursor: pointer;
@@ -648,41 +634,33 @@ body.theme-dark #scan-barcode-btn {
     flex-direction: column;
     justify-content: space-between;
     align-items: center;
-    
     /* New border and border-radius for the softer look */
     border: 1px solid var(--border-color);
     border-radius: 8px; /* Adjust this value to make it more/less round */
 }
-
 .calendar-day:hover {
     background-color: var(--hover-background);
 }
-
 .day-number {
     font-size: 0.9em;
     padding: 4px 0;
 }
-
 /* Updated "today" highlight to be cleaner */
 .calendar-day.is-today {
     border-color: var(--primary-color);
     background-color: rgba(var(--primary-color-rgb), 0.1);
 }
-
 .calendar-day.is-today .day-number {
     font-weight: bold;
     color: var(--primary-color);
 }
-
 .calendar-day.other-month {
     background-color: var(--background-color-alt);
     border-color: transparent; /* Hide border for non-month days */
 }
-
 .calendar-day.other-month .day-number {
     opacity: 0.5;
 }
-
 .calendar-workout-bar {
     width: 100%;
     border: none;
@@ -695,23 +673,19 @@ body.theme-dark #scan-barcode-btn {
     text-transform: uppercase;
     transition: filter 0.2s;
 }
-
 .calendar-day.is-selected {
     /* A thick, white border to make it stand out */
     border: 2px solid white;
     /* A subtle background to further distinguish it */
     background-color: var(--hover-background);
 }
-
 .calendar-workout-bar:hover {
     filter: brightness(1.15);
 }
-
 .calendar-workout-bar.category-push { background-color: #d32f2f; }
 .calendar-workout-bar.category-pull { background-color: #7b1fa2; }
 .calendar-workout-bar.category-legs { background-color: #388e3c; }
 .calendar-workout-bar.category-other { background-color: #f57c00; }
-
 /* --- REFINED FOOD CALENDAR BAR STYLES --- */
 .food-calendar-bar {
     width: 100%;
@@ -725,34 +699,27 @@ body.theme-dark #scan-barcode-btn {
     transition: filter 0.2s;
     /* Removed multi-line properties */
 }
-
 .food-calendar-bar:hover {
     filter: brightness(1.15);
 }
-
 /* Color-coding based on the existing macro classes */
 .food-calendar-bar.macro-green { background-color: #388e3c; } /* Green */
 .food-calendar-bar.macro-yellow { background-color: #fbc02d; } /* Yellow */
 .food-calendar-bar.macro-red { background-color: #d32f2f; } /* Red */
 .food-calendar-bar.macro-default { background-color: #546e7a; } /* Grey for no goal */
-
 /* --- NEW LAYOUT FOR FOOD LOG TAB --- */
 #tab-food-log > section {
     /* Set a maximum width - 800px is a good starting point */
     max-width: 1200px;
-    
     /* On smaller screens, it will take up 100% of the available space */
     width: 100%;
-    
     /* This is the magic for centering a block element */
     margin-left: auto;
     margin-right: auto;
 }
-
 #food-calendar-container {
     margin-bottom: 20px;
 }
-
 /* --- NEW STYLES FOR WORKOUT TIMER --- */
 #workout-timer-display {
     font-size: 1.1em;
@@ -766,7 +733,6 @@ body.theme-dark #scan-barcode-btn {
     align-items: center;
     gap: 8px; /* Space between icon and time */
 }
-
 /* --- NEW STYLES FOR REST TIMER --- */
 #rest-timer-section {
     display: flex;
@@ -775,19 +741,16 @@ body.theme-dark #scan-barcode-btn {
     gap: 15px;
     padding: 20px;
 }
-
 #rest-timer-display {
     font-size: 3.5em; /* Big, easy to read timer */
     font-weight: bold;
     font-family: 'Courier New', Courier, monospace; /* Monospaced for stable width */
     color: var(--text-color);
 }
-
 .rest-timer-controls {
     display: flex;
     gap: 15px;
 }
-
 .rest-timer-controls button {
     min-width: 100px; /* Give buttons a nice uniform width */
 }
@@ -797,13 +760,11 @@ body.theme-dark #scan-barcode-btn {
     flex-direction: column;
     gap: 0.5rem;
 }
-
 .food-item-details {
     border: 1px solid var(--border-color);
     border-radius: 6px;
     background-color: var(--background-color);
 }
-
 .food-item-summary {
     display: flex;
     justify-content: space-between;
@@ -811,29 +772,23 @@ body.theme-dark #scan-barcode-btn {
     cursor: pointer;
     list-style: none; /* Hide the default triangle */
 }
-
 .food-item-summary::-webkit-details-marker {
     display: none; /* Hide triangle in Chrome/Safari */
 }
-
 .food-item-summary:hover {
     background-color: var(--hover-background, rgba(0,0,0,0.05));
 }
-
 .food-item-summary .food-name {
     font-weight: bold;
 }
-
 .food-item-summary .food-calories {
     color: var(--text-color);
     font-weight: bold;
 }
-
 .food-item-content {
     padding: 0 1rem 1rem 1rem;
     border-top: 1px solid var(--border-color);
 }
-
 .macro-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -842,11 +797,9 @@ body.theme-dark #scan-barcode-btn {
     color: var(--secondary-color);
     font-size: 0.9em;
 }
-
 .food-item-actions {
     text-align: right;
 }
-
 .edit-quantity-form {
     display: flex;
     align-items: center;
@@ -854,7 +807,6 @@ body.theme-dark #scan-barcode-btn {
     justify-content: flex-end;
     padding-top: 0.5rem;
 }
-
 .edit-quantity-form input,
 .edit-quantity-form select {
     width: 80px;
@@ -864,24 +816,20 @@ body.theme-dark #scan-barcode-btn {
 #custom-food-modal .modal-content {
     text-align: left;
 }
-
 #custom-food-modal h2 {
     text-align: center;
     margin-bottom: 1rem;
 }
-
 #custom-food-modal p {
     text-align: center;
     color: var(--secondary-color);
     margin-bottom: 1.5rem;
 }
-
 #custom-food-modal hr {
     border: none;
     border-top: 1px solid var(--border-color);
     margin: 1.5rem 0;
 }
-
 #custom-food-modal .form-actions {
     margin-top: 1.5rem;
     justify-content: flex-end;
@@ -891,12 +839,10 @@ body.theme-dark #scan-barcode-btn {
     position: relative;
     display: inline-block;
 }
-
 #settings-menu-btn {
     font-size: 1.5rem;
     color: var(--text-color-light);
 }
-
 .dropdown-content {
     display: none; /* Hidden by default, JS will toggle this */
     position: absolute;
@@ -909,15 +855,13 @@ body.theme-dark #scan-barcode-btn {
     border-radius: 8px;
     z-index: 100;
     padding: 0.5rem 0;
-	transform: translateZ(0); 
+transform: translateZ(0);
 }
-
 .dropdown-content hr {
     margin: 0.5rem 0;
     border: none;
     border-top: 1px solid var(--border-color);
 }
-
 .dropdown-item {
     width: 100%;
     padding: 0.75rem 1.5rem;
@@ -927,34 +871,265 @@ body.theme-dark #scan-barcode-btn {
     border: none;
     font-size: 1rem;
 }
-
 .dropdown-item:hover {
     background-color: var(--background-color);
 }
-
 /* Specific styles for items moved into the dropdown */
 .dropdown-content .tab-button {
     border: none; /* Remove border from tab buttons */
 }
-
 .dropdown-content .theme-switcher-container {
     display: flex;
     justify-content: flex-start; /* Or just remove justify-content */
     align-items: center;
     gap: 0.5rem; /* Add some space between label and select */
 }
-
 #logout-btn {
     width: 100%;
     background: none;
     color: var(--danger-color);
     font-weight: bold;
 }
-
 #logout-btn:hover {
     background-color: var(--background-color);
 }
 .dropdown-content #theme-switcher {
     width: auto; /* Override the global 100% width */
     flex-shrink: 0; /* Prevent it from shrinking if space is tight */
+}
+.programs-layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+@media (max-width: 900px) {
+    .programs-layout {
+        grid-template-columns: 1fr;
+    }
+}
+.program-list-item {
+    padding: 1rem;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s;
+}
+.program-list-item:last-child {
+    border-bottom: none;
+}
+.program-list-item:hover {
+    background-color: var(--background-color);
+}
+.program-list-item.active {
+    background-color: var(--primary-color);
+    color: var(--text-color-light);
+    font-weight: bold;
+}
+.program-detail-panel .log-table td:first-child {
+    font-weight: bold;
+}
+.program-notes {
+    margin-top: 2rem;
+    padding: 1rem;
+    background-color: var(--background-color);
+    border-radius: 6px;
+}
+#tab-programs {
+    max-width: 1400px; /* Adjust this value to make it wider or narrower */
+    margin: 0 auto;
+}
+.program-exercise-list {
+    /* Add some space between workout sections */
+    margin-bottom: 1rem;
+}
+.program-exercise-row {
+    display: grid;
+    grid-template-columns: 3fr 1fr; /* 75% / 25% split */
+    gap: 1rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.program-exercise-list .program-exercise-row:last-child {
+    border-bottom: none; /* Remove border from last item */
+}
+.program-exercise-row span:last-child {
+    text-align: right;
+}
+.workout-log-entry-row {
+    display: grid;
+    grid-template-columns: 3fr 1fr 1fr 1fr 40px; /* Exercise, Weight, Sets, Reps, Actions */
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.workout-log-entry-row input {
+    font-size: 1em;
+    padding: 0.5rem;
+}
+.workout-log-entry-row .actions-cell {
+    text-align: right;
+}
+.workout-log-header-row, .workout-log-entry-row {
+    display: grid;
+    grid-template-columns: 3fr 1fr 1fr 1fr 40px; /* Exercise, Weight, Sets, Reps, Actions */
+    gap: 0.75rem;
+    align-items: center;
+}
+.workout-log-header-row {
+    padding: 0 0.5rem 0.5rem 0.5rem;
+    border-bottom: 2px solid var(--border-color);
+    font-weight: bold;
+    color: var(--secondary-color);
+    font-size: 0.9em;
+}
+.workout-log-header-row span:not(:first-child), .workout-log-entry-row .center-text {
+    text-align: center;
+}
+.workout-log-entry-row {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.workout-log-entry-row input {
+    font-size: 1em;
+    padding: 0.5rem;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+}
+.workout-log-entry-row input[data-field="name"] {
+    text-align: left;
+}
+.workout-log-entry-row .actions-cell {
+    text-align: right;
+}
+#workout-exercise-search-results {
+    position: absolute; /* This allows JS to position it freely */
+}
+
+/* --- REFINED PERSONAL RECORDS (PR) STYLES --- */
+
+/* This now controls the grid of exercise cards.
+   Adjust minmax to control card size. 220px is ~30% smaller than a 300px default. */
+.pr-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+}
+
+/* Make the exercise name font a few sizes larger */
+.pr-layout .card h4 {
+    font-size: 1.5em; /* Increased from default h4 size */
+    margin-bottom: 1.25rem;
+    text-align: center;
+}
+
+/* Stack the metric boxes vertically instead of side-by-side */
+.pr-card-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem; /* Reduced gap for tighter vertical stacking */
+}
+
+/* General styling for each metric box */
+.pr-metric {
+    background-color: var(--background-color);
+    padding: 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+.pr-metric-value {
+    display: block;
+    font-size: 1.8em;
+    font-weight: bold;
+}
+
+.pr-metric-label {
+    font-size: 0.8em;
+    color: var(--secondary-color);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+
+/* --- NEW: COLORING FOR PR METRICS --- */
+
+/* Color for the Estimated 1-Rep Max value (uses theme's success green) */
+.pr-metric.metric-e1rm .pr-metric-value {
+    color: var(--success-color);
+}
+
+/* For dark themes, make the "Heaviest Lift" value white */
+body.theme-dark .pr-metric.metric-heavy-lift .pr-metric-value {
+    color: var(--text-color-light); /* This is your theme's "white" */
+}
+
+/* For light/forest themes, use a dark color to ensure readability */
+body:not(.theme-dark) .pr-metric.metric-heavy-lift .pr-metric-value {
+    color: var(--header-background); /* This is a dark color from your themes */
+}
+/* --- REFINED "ADD EXERCISE" BUTTON STYLES (V2) --- */
+
+/* This targets the container for the button and aligns it to the left */
+#current-workout-section .add-exercise-row {
+    padding: 1rem 0;
+    text-align: left;
+}
+
+/* This uses a more specific selector (#current-workout-section) to guarantee the styles apply */
+#current-workout-section .add-exercise-btn {
+    /* --- Color and Shape --- */
+    background-color: var(--success-color); /* Green background */
+    color: var(--text-color-light);         /* White '+' sign */
+    border: none;                           /* Remove all borders */
+    border-radius: 50%;                     /* Make it a perfect circle */
+    
+    /* --- Sizing --- */
+    width: 44px;                            /* A comfortable but compact size */
+    height: 44px;
+    padding: 0;                             /* Remove any default padding */
+
+    /* --- The '+' Symbol --- */
+    font-size: 2.2rem;                      /* A nice large plus sign */
+    font-weight: 300;                       /* A thinner, more modern font weight */
+    line-height: 44px;                      /* Vertically centers the '+' in the button */
+    text-align: center;                     /* Horizontally centers the '+' */
+
+    /* --- Interaction --- */
+    cursor: pointer;
+    opacity: 0.9;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+#current-workout-section .add-exercise-btn:hover {
+    opacity: 1;
+    transform: scale(1.05); /* A subtle "grow" effect on hover */
+    border-style: none;     /* Ensure no border appears on hover */
+}
+/* --- NEW: Confirmation Modal Styles --- */
+#confirmation-modal .modal-content {
+    max-width: 450px;
+    text-align: center;
+}
+
+#confirmation-modal h3 {
+    margin-bottom: 1rem;
+    font-size: 1.4em;
+}
+
+#confirmation-modal p {
+    color: var(--secondary-color);
+    margin-bottom: 1.5rem;
+    font-size: 1.1em;
+    line-height: 1.5;
+}
+
+/* This makes the confirm button red for delete actions */
+#confirmation-confirm-btn[data-danger="true"] {
+    background-color: var(--danger-color);
 }
