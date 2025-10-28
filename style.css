@@ -673,6 +673,16 @@ body.theme-dark #scan-barcode-btn {
     text-transform: uppercase;
     transition: filter 0.2s;
 }
+/* --- CALENDAR BAR COLORS FOR NEW CATEGORIES --- */
+.calendar-workout-bar.category-upper-body { background-color: #17a2b8; } /* Teal */
+.calendar-workout-bar.category-lower-body { background-color: #6f42c1; } /* Indigo */
+
+/* Special style for Full Body for high contrast */
+.calendar-workout-bar.category-full-body { 
+    background-color: #f8f9fa; /* Off-white */
+    color: #212529; /* Dark text for readability */
+    border: 1px solid #adb5bd; /* A subtle border to pop on light backgrounds */
+}
 .calendar-day.is-selected {
     /* A thick, white border to make it stand out */
     border: 2px solid white;
