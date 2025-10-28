@@ -1,4 +1,4 @@
-// js/modules/workout.js (V8 - Dynamic Inline Rest Timer - Complete)
+// js/modules/workout.js (V9 - Final Bug Fixes)
 function createWorkoutModule() {
     // --- 1. MODULE SCOPE & REFERENCES ---
     let db, getState, saveDataToFirebase, getTodayDateString, formatDate, showConfirmation;
@@ -32,23 +32,23 @@ function createWorkoutModule() {
     const calendarPrevWeekBtn = document.getElementById('calendar-prev-week');
     const calendarNextWeekBtn = document.getElementById('calendar-next-week');
     const workoutTimerDisplay = document.getElementById('workout-timer-display');
-    const CATEGORIES = ['Push', 'Pull', 'Legs', 'Other'];
+    const restTimerDisplay = document.getElementById('rest-timer-display');
+    const restTimerStartBtn = document.getElementById('rest-timer-start-btn');
+    const restTimerPauseBtn = document.getElementById('rest-timer-pause-btn');
+    const CATEGORIES = ['Push', 'Pull', 'Legs', 'Upper Body', 'Lower Body', 'Full Body', 'Other'];
 
     // --- 2. HELPER & UTILITY ---
     const toLocalISOString = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     const formatDuration = (ms) => {
         if (!ms || ms < 0) return '00:00:00';
         const totalSeconds = Math.floor(ms / 1000);
-        const h = Math.floor(totalSeconds / 3600),
-            m = Math.floor((totalSeconds % 3600) / 60),
-            s = totalSeconds % 60;
+        const h = Math.floor(totalSeconds / 3600), m = Math.floor((totalSeconds % 3600) / 60), s = totalSeconds % 60;
         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     };
     const formatRestTime = (ms) => {
         if (!ms || ms < 0) return '00:00';
         const totalSeconds = Math.floor(ms / 1000);
-        const m = Math.floor(totalSeconds / 60),
-            s = totalSeconds % 60;
+        const m = Math.floor(totalSeconds / 60), s = totalSeconds % 60;
         return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     };
     const startTimerDisplay = (startTime) => {
@@ -57,6 +57,11 @@ function createWorkoutModule() {
         workoutTimerInterval = setInterval(() => {
             workoutTimerDisplay.querySelector('span').textContent = formatDuration(Date.now() - startTime);
         }, 1000);
+    };
+    const updateRestTimerDisplay = () => {
+        const currentSegmentTime = restTimerStartTime ? Date.now() - restTimerStartTime : 0;
+        const totalTime = restTimerElapsedTime + currentSegmentTime;
+        if(restTimerDisplay) restTimerDisplay.textContent = formatRestTime(totalTime);
     };
     function createSetsSummaryString(sets) {
         if (!sets || sets.length === 0) return 'No sets logged';
@@ -73,7 +78,9 @@ function createWorkoutModule() {
         const summaryParts = [];
         for (const group of setGroups.values()) {
             const { count, weight, reps } = group;
-            summaryParts.push(`${count} ${count > 1 ? 'sets' : 'set'} of ${reps} x ${weight}lbs`);
+            const plural = count > 1 ? 'sets' : 'set';
+            // CORRECTED: Added backtick for template literal
+            summaryParts.push(`${count} ${plural} of ${reps} x ${weight}lbs`);
         }
         return summaryParts.join('<br>');
     }
@@ -111,7 +118,6 @@ function createWorkoutModule() {
         workout.exercises = migrateExerciseData(workout.exercises);
         workoutLogEntries.innerHTML = '';
         const isWorkoutFinished = workout.isFinished || false;
-
         workout.exercises.forEach(exercise => {
             const exerciseCard = document.createElement('div');
             exerciseCard.className = 'exercise-card';
@@ -120,11 +126,9 @@ function createWorkoutModule() {
             let headerHTML = `<div class="exercise-header">${isNameSetAndNotEditing
                 ? `<h4>${exercise.name}</h4><div class="actions">${!isWorkoutFinished ? `<button class="icon-btn edit-exercise" title="Edit Exercise">&#9998;</button><button class="icon-btn delete-exercise" title="Delete Exercise">&#128465;</button>`:''}</div>`
                 : `<input type="text" class="inline-log-input exercise-name-input" placeholder="Enter Exercise Name..." value="${exercise.name || ''}" autocomplete="off">`}</div>`;
-            
             let bodyHTML = '<div class="set-list">';
             if (exercise.name) {
                 if (exercise.sets.length > 0) bodyHTML += `<div class="set-row-header"><span>WEIGHT (LBS)</span><span>REPS</span></div>`;
-                
                 exercise.sets.forEach((set, index) => {
                     let setRowHTML = '';
                     if (isNameSetAndNotEditing || isWorkoutFinished) {
@@ -132,19 +136,16 @@ function createWorkoutModule() {
                     } else {
                         setRowHTML = `<div class="set-row" data-set-id="${set.id}"><span class="set-number">${index + 1}</span>${createStepperInput('weight', set.weight, 5)}${createStepperInput('reps', set.reps, 1)}<button class="icon-btn complete-set-btn" title="Complete Set">&#10004;</button><button class="icon-btn delete-set" title="Delete Set">&#10006;</button></div>`;
                     }
-                    
                     if (activeRestTimer.setId === set.id) {
                         setRowHTML += `<div class="rest-timer-inline"><span class="rest-timer-inline-time">00:00</span><div class="rest-timer-inline-actions"><button class="btn-secondary dismiss-rest-timer">Dismiss</button></div></div>`;
                     }
                     bodyHTML += setRowHTML;
                 });
-                
                 if (!isNameSetAndNotEditing && !isWorkoutFinished) {
                     bodyHTML += `<div class="add-set-btn-container"><button class="add-set-btn" title="Add Set">+</button></div>`;
                 }
             }
             bodyHTML += '</div>';
-            
             let footerHTML = (exercise.name && exercise.isEditing) ? `<div class="exercise-done-btn-container"><button class="btn-primary exercise-done-btn">Done</button></div>` : '';
             exerciseCard.innerHTML = headerHTML + bodyHTML + footerHTML;
             workoutLogEntries.appendChild(exerciseCard);
@@ -229,7 +230,8 @@ function createWorkoutModule() {
             if (workout) {
                 const bar = document.createElement('button');
                 bar.className = 'calendar-workout-bar';
-                bar.classList.add(`category-${workout.category.toLowerCase()}`);
+                // Corrected: Use standard template literal for classList.add
+                bar.classList.add(`category-${workout.category.toLowerCase().replace(' ', '-')}`);
                 bar.textContent = workout.category;
                 dayEl.appendChild(bar);
             }
@@ -288,7 +290,7 @@ function createWorkoutModule() {
                 exercise.isEditing = true;
                 renderLogEntries();
             } else if (e.target.matches('.delete-exercise')) {
-                if (await showConfirmation(`Delete all sets for ${exercise.name}?`)) {
+                 if (await showConfirmation(`Delete all sets for ${exercise.name}?`)) {
                     workout.exercises = workout.exercises.filter(ex => ex.id !== exerciseId);
                     saveDataToFirebase();
                     renderLogEntries();
@@ -324,7 +326,6 @@ function createWorkoutModule() {
                 renderLogEntries();
             }
         });
-        
         workoutLogEntries.addEventListener('input', (e) => {
             const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
             if (!workout) return;
@@ -354,7 +355,6 @@ function createWorkoutModule() {
             }
             saveDataToFirebase();
         });
-        
         workoutLogEntries.addEventListener('blur', (e) => {
              if (e.target.matches('.exercise-name-input')) {
                  setTimeout(() => {
@@ -372,7 +372,6 @@ function createWorkoutModule() {
                  }, 200);
              }
         }, true);
-        
         exerciseSearchResults.addEventListener('click', (e) => {
             if (e.target.matches('.search-result-item') && activeExerciseInput) {
                 const newName = e.target.textContent;
@@ -389,7 +388,6 @@ function createWorkoutModule() {
                 activeExerciseInput = null;
             }
         });
-
         startWorkoutBtn.addEventListener('click', () => {
             const date = selectedCalendarDate;
             if (getState().workouts.some(w => w.date === date)) { alert('A workout for this date already exists.'); return; }
@@ -409,6 +407,7 @@ function createWorkoutModule() {
         editBodyweightBtn.addEventListener('click', () => { const w = getState().workouts.find(w => w.date === currentWorkoutDate); if (!w) return; const nBw = prompt("Enter new body weight (lbs):", w.bodyweight || ''); if (nBw !== null) { w.bodyweight = parseFloat(nBw) || ''; saveDataToFirebase(); render(); } });
         summaryCategorySelect.addEventListener('change', (e) => renderSummary(e.target.value));
         workoutCategorySelect.addEventListener('change', (e) => { summaryCategorySelect.value = e.target.value; renderSummary(e.target.value); });
+        // Old rest timer listeners are removed as they are no longer needed.
     }
     
     // --- 6. INITIALIZATION ---
