@@ -4,11 +4,11 @@ const URLS_TO_CACHE = [
     './index.html',
     './style.css',
     './predefined-exercises.js',
+    './training-programs.js', 
     './js/app.js',
     './js/modules/workout.js',
     './js/modules/exercises.js',
     './js/modules/food.js',
-	'./js/modules/food-api.js',
     './js/modules/profile.js',
     './js/modules/progress.js',
     './js/modules/userAdmin.js',
@@ -56,6 +56,5 @@ self.addEventListener('activate', event => {
         })
     );
 });
-
 
 
