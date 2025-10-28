@@ -1,101 +1,223 @@
-// js/modules/food.js (V3 - Corrected Calendar and All Previous Fixes)
-function createFoodModule() {
+// js/modules/workout.js (V8 - Dynamic Inline Rest Timer - Complete)
+function createWorkoutModule() {
     // --- 1. MODULE SCOPE & REFERENCES ---
-    let db, getState, saveDataToFirebase, getTodayDateString, foodApi, calculateCurrentGoals, formatDate, showConfirmation;
-    let currentFoodLogDate = null,
+    let db, getState, saveDataToFirebase, getTodayDateString, formatDate, showConfirmation;
+    let currentWorkoutDate = null,
         calendarViewDate = new Date(),
         selectedCalendarDate = null,
-        macroChart,
-        html5QrCode,
-        lastSelectedMeal = null,
-        usdaSearchTimeout;
-
-    // Constants
-    const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+        workoutTimerInterval = null,
+        restTimerInterval = null,
+        activeRestTimer = { setId: null, startTime: 0 },
+        activeExerciseInput = null;
 
     // DOM Elements
-    const createFoodLogSection = document.getElementById('create-food-log-section');
-    const createFoodLogForm = document.getElementById('create-food-log-form');
-    const foodLogDateInput = document.getElementById('food-log-date');
-    const currentFoodLogSection = document.getElementById('current-food-log-section');
-    const foodLogTitle = document.getElementById('food-log-title');
-    const prevFoodLogBtn = document.getElementById('prev-food-log-btn');
-    const nextFoodLogBtn = document.getElementById('next-food-log-btn');
-    const editFoodLogBtn = document.getElementById('edit-food-log-btn');
-    const deleteFoodLogBtn = document.getElementById('delete-food-log-btn');
-    const addFoodItemForm = document.getElementById('add-food-item-form');
-    const foodItemNameInput = document.getElementById('food-item-name');
-    const foodSearchResultsContainer = document.getElementById('food-search-results-container');
-    const foodItemMealSelect = document.getElementById('food-item-meal');
-    const foodItemFatInput = document.getElementById('food-item-fat');
-    const foodItemCarbsInput = document.getElementById('food-item-carbs');
-    const foodItemProteinInput = document.getElementById('food-item-protein');
-    const foodLogEntries = document.getElementById('food-log-entries');
-    const foodLogTotals = document.getElementById('food-log-totals');
-    const calorieGoalProgress = document.getElementById('calorie-goal-progress');
-    const finishFoodLogBtn = document.getElementById('finish-food-log-btn');
-    const foodMacroDetails = document.getElementById('food-macro-details');
-    const foodItemQuantityInput = document.getElementById('food-item-quantity');
-    const foodItemUnitSelect = document.getElementById('food-item-unit');
-    const scannerModal = document.getElementById('scanner-modal');
-    const scanBarcodeBtn = document.getElementById('scan-barcode-btn');
-    const scannerCloseBtn = document.getElementById('scanner-close-btn');
-    const foodCalendarMonthYear = document.getElementById('food-calendar-month-year');
-    const foodCalendarDaysGrid = document.getElementById('food-calendar-days-grid');
-    const foodCalendarPrevWeekBtn = document.getElementById('food-calendar-prev-week');
-    const foodCalendarNextWeekBtn = document.getElementById('food-calendar-next-week');
-    const showCustomFoodModalBtn = document.getElementById('show-custom-food-modal-btn');
-    const customFoodModal = document.getElementById('custom-food-modal');
-    const customFoodModalCloseBtn = document.getElementById('custom-food-modal-close-btn');
-    const customFoodForm = document.getElementById('custom-food-form');
-    const customFoodName = document.getElementById('custom-food-name');
-    const customServingSize = document.getElementById('custom-serving-size');
-    const customFat = document.getElementById('custom-fat');
-    const customCarbs = document.getElementById('custom-carbs');
-    const customProtein = document.getElementById('custom-protein');
-    const customFoodError = document.getElementById('custom-food-error');
+    const workoutBodyweightInput = document.getElementById('workout-bodyweight');
+    const workoutCategorySelect = document.getElementById('workout-category');
+    const startWorkoutBtn = document.getElementById('start-workout-btn');
+    const currentWorkoutSection = document.getElementById('current-workout-section');
+    const workoutTitle = document.getElementById('workout-title');
+    const prevWorkoutBtn = document.getElementById('prev-workout-btn');
+    const nextWorkoutBtn = document.getElementById('next-workout-btn');
+    const editWorkoutBtn = document.getElementById('edit-workout-btn');
+    const deleteWorkoutBtn = document.getElementById('delete-workout-btn');
+    const workoutLogEntries = document.getElementById('workout-log-entries');
+    const exerciseSearchResults = document.getElementById('workout-exercise-search-results');
+    const finishWorkoutBtn = document.getElementById('finish-workout-btn');
+    const summaryCategorySelect = document.getElementById('summary-category-select');
+    const workoutSummaryContent = document.getElementById('workout-summary-content');
+    const bodyweightValue = document.getElementById('bodyweight-value');
+    const editBodyweightBtn = document.getElementById('edit-bodyweight-btn');
+    const calendarMonthYear = document.getElementById('calendar-month-year');
+    const calendarDaysGrid = document.getElementById('calendar-days-grid');
+    const calendarPrevWeekBtn = document.getElementById('calendar-prev-week');
+    const calendarNextWeekBtn = document.getElementById('calendar-next-week');
+    const workoutTimerDisplay = document.getElementById('workout-timer-display');
+    const CATEGORIES = ['Push', 'Pull', 'Legs', 'Other'];
 
-    // --- 2. HELPER FUNCTIONS ---
+    // --- 2. HELPER & UTILITY ---
     const toLocalISOString = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    const getMacroColorClass = (current, goal) => {
-        if (goal <= 0) return 'macro-default';
-        const percentage = (current / goal) * 100;
-        if (percentage > 125) return 'macro-red';
-        if (percentage >= 75) return 'macro-green';
-        if (percentage >= 50) return 'macro-yellow';
-        return 'macro-red';
+    const formatDuration = (ms) => {
+        if (!ms || ms < 0) return '00:00:00';
+        const totalSeconds = Math.floor(ms / 1000);
+        const h = Math.floor(totalSeconds / 3600),
+            m = Math.floor((totalSeconds % 3600) / 60),
+            s = totalSeconds % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     };
-    const getMealForCurrentTime = () => {
-        const h = new Date().getHours();
-        if (h < 10.5) return 'Breakfast';
-        if (h < 15.5) return 'Lunch';
-        if (h < 17.5) return 'Snack';
-        return 'Dinner';
+    const formatRestTime = (ms) => {
+        if (!ms || ms < 0) return '00:00';
+        const totalSeconds = Math.floor(ms / 1000);
+        const m = Math.floor(totalSeconds / 60),
+            s = totalSeconds % 60;
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     };
-    const setSmartMealDefault = () => { foodItemMealSelect.value = lastSelectedMeal || getMealForCurrentTime(); };
-    const openCustomFoodModal = () => { customFoodModal.style.display = 'flex'; };
-    const closeCustomFoodModal = () => {
-        customFoodModal.style.display = 'none';
-        customFoodForm.reset();
-        customFoodError.textContent = '';
+    const startTimerDisplay = (startTime) => {
+        if (workoutTimerInterval) clearInterval(workoutTimerInterval);
+        workoutTimerDisplay.style.display = 'inline-flex';
+        workoutTimerInterval = setInterval(() => {
+            workoutTimerDisplay.querySelector('span').textContent = formatDuration(Date.now() - startTime);
+        }, 1000);
     };
+    function createSetsSummaryString(sets) {
+        if (!sets || sets.length === 0) return 'No sets logged';
+        const setGroups = new Map();
+        sets.forEach(set => {
+            const weight = set.weight || 0;
+            const reps = set.reps || 0;
+            const key = `${weight}-${reps}`;
+            if (!setGroups.has(key)) {
+                setGroups.set(key, { count: 0, weight, reps });
+            }
+            setGroups.get(key).count++;
+        });
+        const summaryParts = [];
+        for (const group of setGroups.values()) {
+            const { count, weight, reps } = group;
+            summaryParts.push(`${count} ${count > 1 ? 'sets' : 'set'} of ${reps} x ${weight}lbs`);
+        }
+        return summaryParts.join('<br>');
+    }
 
-    // --- 3. RENDER FUNCTIONS ---
-    function renderFoodCalendar() {
+    // --- 3. DATA MIGRATION ---
+    function migrateExerciseData(exercises) {
+        if (!exercises || exercises.length === 0) return [];
+        if (Array.isArray(exercises[0].sets)) return exercises; // Already new format
+        const exerciseMap = new Map();
+        exercises.forEach(oldEntry => {
+            if (!oldEntry.name) return;
+            if (!exerciseMap.has(oldEntry.name)) {
+                exerciseMap.set(oldEntry.name, { id: oldEntry.id || Date.now() + Math.random(), name: oldEntry.name, isEditing: false, sets: [] });
+            }
+            const exercise = exerciseMap.get(oldEntry.name);
+            const numSets = parseInt(oldEntry.sets, 10) || 1;
+            for (let i = 0; i < numSets; i++) {
+                exercise.sets.push({ id: Date.now() + Math.random(), weight: oldEntry.weight || '', reps: oldEntry.reps || '' });
+            }
+        });
+        return Array.from(exerciseMap.values());
+    }
+
+    // --- 4. RENDER FUNCTIONS ---
+    const createStepperInput = (type, value, increment) => `
+        <div class="stepper-input">
+            <button class="stepper-btn minus" data-type="${type}" data-increment="-${increment}">-</button>
+            <input type="number" class="inline-log-input" data-field="${type}" value="${value}" step="${increment === 5 ? 2.5 : 1}">
+            <button class="stepper-btn plus" data-type="${type}" data-increment="${increment}">+</button>
+        </div>`;
+
+    function renderLogEntries() {
+        const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
+        if (!workout) return;
+        workout.exercises = migrateExerciseData(workout.exercises);
+        workoutLogEntries.innerHTML = '';
+        const isWorkoutFinished = workout.isFinished || false;
+
+        workout.exercises.forEach(exercise => {
+            const exerciseCard = document.createElement('div');
+            exerciseCard.className = 'exercise-card';
+            exerciseCard.dataset.exerciseId = exercise.id;
+            const isNameSetAndNotEditing = exercise.name && !exercise.isEditing;
+            let headerHTML = `<div class="exercise-header">${isNameSetAndNotEditing
+                ? `<h4>${exercise.name}</h4><div class="actions">${!isWorkoutFinished ? `<button class="icon-btn edit-exercise" title="Edit Exercise">&#9998;</button><button class="icon-btn delete-exercise" title="Delete Exercise">&#128465;</button>`:''}</div>`
+                : `<input type="text" class="inline-log-input exercise-name-input" placeholder="Enter Exercise Name..." value="${exercise.name || ''}" autocomplete="off">`}</div>`;
+            
+            let bodyHTML = '<div class="set-list">';
+            if (exercise.name) {
+                if (exercise.sets.length > 0) bodyHTML += `<div class="set-row-header"><span>WEIGHT (LBS)</span><span>REPS</span></div>`;
+                
+                exercise.sets.forEach((set, index) => {
+                    let setRowHTML = '';
+                    if (isNameSetAndNotEditing || isWorkoutFinished) {
+                        setRowHTML = `<div class="set-row"><span class="set-number">${index + 1}</span><span>${set.weight || 0}</span><span>${set.reps || 0}</span></div>`;
+                    } else {
+                        setRowHTML = `<div class="set-row" data-set-id="${set.id}"><span class="set-number">${index + 1}</span>${createStepperInput('weight', set.weight, 5)}${createStepperInput('reps', set.reps, 1)}<button class="icon-btn complete-set-btn" title="Complete Set">&#10004;</button><button class="icon-btn delete-set" title="Delete Set">&#10006;</button></div>`;
+                    }
+                    
+                    if (activeRestTimer.setId === set.id) {
+                        setRowHTML += `<div class="rest-timer-inline"><span class="rest-timer-inline-time">00:00</span><div class="rest-timer-inline-actions"><button class="btn-secondary dismiss-rest-timer">Dismiss</button></div></div>`;
+                    }
+                    bodyHTML += setRowHTML;
+                });
+                
+                if (!isNameSetAndNotEditing && !isWorkoutFinished) {
+                    bodyHTML += `<div class="add-set-btn-container"><button class="add-set-btn" title="Add Set">+</button></div>`;
+                }
+            }
+            bodyHTML += '</div>';
+            
+            let footerHTML = (exercise.name && exercise.isEditing) ? `<div class="exercise-done-btn-container"><button class="btn-primary exercise-done-btn">Done</button></div>` : '';
+            exerciseCard.innerHTML = headerHTML + bodyHTML + footerHTML;
+            workoutLogEntries.appendChild(exerciseCard);
+        });
+        if (!isWorkoutFinished) {
+            const addExerciseRow = document.createElement('div');
+            addExerciseRow.className = 'add-exercise-row';
+            addExerciseRow.innerHTML = `<button class="add-exercise-btn" title="Add New Exercise">+</button>`;
+            workoutLogEntries.appendChild(addExerciseRow);
+        }
+    }
+    
+    function renderCurrentWorkoutView() {
+        const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
+        if (!workout) return;
+        const sortedWorkouts = getState().workouts.sort((a, b) => new Date(b.date) - new Date(a.date));
+        const currentIndex = sortedWorkouts.findIndex(w => w.date === currentWorkoutDate);
+        prevWorkoutBtn.disabled = currentIndex >= sortedWorkouts.length - 1;
+        nextWorkoutBtn.disabled = currentIndex <= 0;
+        const isFinished = workout.isFinished || false;
+        workoutTitle.textContent = `${formatDate(workout.date)} - ${workout.category}`;
+        document.getElementById('bodyweight-value').textContent = workout.bodyweight;
+        document.getElementById('bodyweight-display-container').style.display = workout.bodyweight ? 'block' : 'none';
+        finishWorkoutBtn.style.display = isFinished ? 'none' : 'block';
+        editWorkoutBtn.style.display = isFinished ? 'inline-block' : 'none';
+        if (workoutTimerInterval) clearInterval(workoutTimerInterval);
+        if (workout.duration) {
+            workoutTimerDisplay.querySelector('span').textContent = formatDuration(workout.duration);
+            workoutTimerDisplay.style.display = 'inline-flex';
+        } else if (!isFinished && workout.startTime) {
+            startTimerDisplay(workout.startTime);
+        } else {
+            workoutTimerDisplay.style.display = 'none';
+        }
+        renderLogEntries();
+    }
+    
+    function renderSummary(category) {
+        const today = getTodayDateString();
+        const lastWorkout = getState().workouts.filter(w => w.category === category && w.date !== today).sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+        if (!lastWorkout) {
+            workoutSummaryContent.innerHTML = '<p>No previous workout found.</p>';
+            return;
+        }
+        let summaryHTML = `<p><strong>${formatDate(lastWorkout.date)}</strong></p>`;
+        const exercisesToRender = migrateExerciseData(lastWorkout.exercises);
+        if (exercisesToRender.length > 0) {
+            summaryHTML += '<table class="log-table"><thead><tr><th>Exercise</th><th>Sets</th></tr></thead><tbody>';
+            exercisesToRender.forEach(ex => {
+                const setsSummary = createSetsSummaryString(ex.sets);
+                summaryHTML += `<tr><td>${ex.name}</td><td>${setsSummary}</td></tr>`;
+            });
+            summaryHTML += '</tbody></table>';
+        } else {
+            summaryHTML += '<p>No exercises were logged.</p>';
+        }
+        workoutSummaryContent.innerHTML = summaryHTML;
+    }
+    
+    function renderWorkoutCalendar() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const foodLogs = getState().foodLogs;
-        const { goals: currentGoals } = calculateCurrentGoals();
+        const workoutMap = new Map(getState().workouts.map(w => [w.date, w]));
         calendarViewDate.setHours(0, 0, 0, 0);
         const startOfWeek = new Date(calendarViewDate);
         startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-        foodCalendarMonthYear.textContent = calendarViewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
-        foodCalendarDaysGrid.innerHTML = '';
+        calendarMonthYear.textContent = calendarViewDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+        calendarDaysGrid.innerHTML = '';
         for (let i = 0; i < 7; i++) {
             const day = new Date(startOfWeek);
             day.setDate(day.getDate() + i);
             const dateString = toLocalISOString(day);
-            const log = foodLogs[dateString];
+            const workout = workoutMap.get(dateString);
             const isToday = day.getTime() === today.getTime();
             const isSelected = dateString === selectedCalendarDate;
             const dayEl = document.createElement('div');
@@ -104,466 +226,204 @@ function createFoodModule() {
             if (isToday) dayEl.classList.add('is-today');
             if (isSelected) dayEl.classList.add('is-selected');
             dayEl.innerHTML = `<span class="day-number">${day.getDate()}</span>`;
-            if (log && log.items && log.items.length > 0) {
-                const totals = log.items.reduce((acc, item) => {
-                    acc.calories += Number(item.calories) || 0;
-                    acc.protein += Number(item.protein) || 0;
-                    return acc;
-                }, { calories: 0, protein: 0 });
-                const colorClass = getMacroColorClass(totals.calories, currentGoals.calories);
+            if (workout) {
                 const bar = document.createElement('button');
-                bar.className = 'food-calendar-bar';
-                bar.classList.add(colorClass);
-                bar.textContent = `${totals.calories.toFixed(0)} c | ${totals.protein.toFixed(0)}g p`;
+                bar.className = 'calendar-workout-bar';
+                bar.classList.add(`category-${workout.category.toLowerCase()}`);
+                bar.textContent = workout.category;
                 dayEl.appendChild(bar);
             }
-            foodCalendarDaysGrid.appendChild(dayEl);
+            calendarDaysGrid.appendChild(dayEl);
         }
-    }
-
-    function renderFoodEntries(items, isFinished) {
-        foodLogEntries.innerHTML = !items || items.length === 0 ? '<p>No food logged for this day yet.</p>' : '';
-        if (!items || items.length === 0) return;
-
-        const groupedByMeal = items.reduce((acc, item) => {
-            (acc[item.meal] = acc[item.meal] || []).push(item);
-            return acc;
-        }, {});
-
-        MEALS.forEach(meal => {
-            if (groupedByMeal[meal] && groupedByMeal[meal].length > 0) {
-                foodLogEntries.innerHTML += `<h4>${meal}</h4>`;
-                const mealItemsContainer = document.createElement('div');
-                mealItemsContainer.className = 'food-entries-list';
-                groupedByMeal[meal].forEach(item => {
-                    const isEditMode = item.isEditing === true;
-                    const details = document.createElement('details');
-                    details.className = 'food-item-details';
-                    details.dataset.entryId = item.id;
-                    if (isEditMode) details.open = true;
-                    details.innerHTML = `
-                        <summary class="food-item-summary">
-                            <span class="food-name">${item.name}</span>
-                            <span class="food-calories">${Number(item.calories || 0).toFixed(0)} kcal</span>
-                        </summary>
-                        <div class="food-item-content">
-                            <div class="macro-grid">
-                                <span>Fat: ${Number(item.fat || 0).toFixed(1)}g</span>
-                                <span>Carbs: ${Number(item.carbs || 0).toFixed(1)}g</span>
-                                <span>Protein: ${Number(item.protein || 0).toFixed(1)}g</span>
-                            </div>
-                            ${isEditMode ? (() => {
-                                let unitOpts = `<option value="serving" ${item.unit === 'serving' ? 'selected': ''}>serving</option>`;
-                                if ((parseFloat(item.servingGrams) || 1) > 1) unitOpts += `<option value="g" ${item.unit === 'g' ? 'selected' : ''}>g</option>`;
-                                return `<div class="edit-quantity-form">
-                                    <input type="number" class="inline-edit-qty" value="${parseFloat(item.originalQty) || 1}" step="0.1" required>
-                                    <select class="inline-edit-unit">${unitOpts}</select>
-                                    <button class="icon-btn save" title="Save Quantity">&#10004;</button>
-                                    <button class="icon-btn cancel" title="Cancel Edit">&#10006;</button>
-                                </div>`;
-                            })() : !isFinished ? `
-                            <div class="food-item-actions">
-                                <button class="icon-btn edit" title="Edit Quantity">&#9998;</button>
-                                <button class="icon-btn delete" title="Delete Entry">&#128465;</button>
-                            </div>` : ''}
-                        </div>`;
-                    mealItemsContainer.appendChild(details);
-                });
-                foodLogEntries.appendChild(mealItemsContainer);
-            }
-        });
-    }
-
-    function calculateAndRenderTotals(items) {
-        const totals = (items || []).reduce((acc, item) => {
-            acc.fat += Number(item.fat) || 0;
-            acc.carbs += Number(item.carbs) || 0;
-            acc.protein += Number(item.protein) || 0;
-            acc.calories += Number(item.calories) || 0;
-            return acc;
-        }, { fat: 0, carbs: 0, protein: 0, calories: 0 });
-
-        const { goals: currentGoals } = calculateCurrentGoals();
-        const goalCals = currentGoals.calories || 0;
-        const goalFat = currentGoals.fat || 0;
-        const goalCarbs = currentGoals.carbs || 0;
-        const goalProtein = currentGoals.protein || 0;
-
-        calorieGoalProgress.innerHTML = goalCals > 0 ? `<span class="${getMacroColorClass(totals.calories, goalCals)}">${totals.calories.toFixed(0)}</span> / ${goalCals.toFixed(0)} kcal` : '';
-        
-        foodLogTotals.innerHTML = `
-            <span class="macro-value">Fat: <span class="${getMacroColorClass(totals.fat, goalFat)}">${totals.fat.toFixed(1)}</span>/${goalFat.toFixed(0)}g</span> | 
-            <span class="macro-value">Carbs: <span class="${getMacroColorClass(totals.carbs, goalCarbs)}">${totals.carbs.toFixed(1)}</span>/${goalCarbs.toFixed(0)}g</span> | 
-            <span class="macro-value">Protein: <span class="${getMacroColorClass(totals.protein, goalProtein)}">${totals.protein.toFixed(1)}</span>/${goalProtein.toFixed(0)}g</span>`;
-        
-        renderPieChart(totals);
     }
     
-    function renderPieChart(totals) {
-        const canvas = document.getElementById('macro-pie-chart');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        if (macroChart) macroChart.destroy();
-
-        const fatCals = totals.fat * 9;
-        const carbCals = totals.carbs * 4;
-        const protCals = totals.protein * 4;
-        const totalCals = fatCals + carbCals + protCals;
-
-        if (totalCals === 0) {
-            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-            return;
-        }
-
-        macroChart = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: [`Fat (${(fatCals / totalCals * 100).toFixed(0)}%)`, `Carbs (${(carbCals / totalCals * 100).toFixed(0)}%)`, `Protein (${(protCals / totalCals * 100).toFixed(0)}%)`],
-                datasets: [{
-                    data: [fatCals, carbCals, protCals],
-                    backgroundColor: ['#FFC107', '#03A9F4', '#F44336'],
-                    borderColor: getComputedStyle(document.body).getPropertyValue('--card-background'),
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'top', labels: { color: getComputedStyle(document.body).getPropertyValue('--text-color') } }
-                }
-            }
-        });
-    }
-
     function render() {
         if (!selectedCalendarDate) selectedCalendarDate = getTodayDateString();
-        renderFoodCalendar();
-
-        const logExists = getState().foodLogs[selectedCalendarDate];
-        currentFoodLogDate = logExists ? selectedCalendarDate : null;
-
-        if (currentFoodLogDate) {
-            currentFoodLogSection.style.display = 'block';
-            const log = getState().foodLogs[currentFoodLogDate];
-            const isFinished = log.isFinished || false;
-            const sortedDates = Object.keys(getState().foodLogs).sort((a, b) => new Date(b) - new Date(a));
-            const currentIndex = sortedDates.indexOf(currentFoodLogDate);
-            
-            foodLogTitle.textContent = formatDate(currentFoodLogDate);
-            prevFoodLogBtn.disabled = currentIndex >= sortedDates.length - 1;
-            nextFoodLogBtn.disabled = currentIndex <= 0;
-            addFoodItemForm.style.display = isFinished ? 'none' : 'block';
-            finishFoodLogBtn.style.display = isFinished ? 'none' : 'block';
-            editFoodLogBtn.style.display = isFinished ? 'inline-block' : 'none';
-            
-            renderFoodEntries(log.items, isFinished);
-            calculateAndRenderTotals(log.items);
+        renderWorkoutCalendar();
+        const workoutExists = getState().workouts.some(w => w.date === selectedCalendarDate);
+        currentWorkoutDate = workoutExists ? selectedCalendarDate : null;
+        if (currentWorkoutDate) {
+            renderCurrentWorkoutView();
+            currentWorkoutSection.style.display = 'block';
         } else {
-            currentFoodLogSection.style.display = 'none';
+            if (workoutTimerInterval) clearInterval(workoutTimerInterval);
+            currentWorkoutSection.style.display = 'none';
         }
-        
-        createFoodLogSection.style.display = 'block';
-    }
-
-
-    // --- 4. API & FORM HANDLING ---
-    function handleUpcSuccess(response) {
-        const product = response.product ? response.product : response;
-        if (!product || product.status === 0 || !product.product_name) {
-            handleApiError(new Error('Product not found or API data is incomplete.'));
-            foodItemNameInput.value = '';
-            return;
-        }
-        const nutrients = product.nutriments;
-        const productName = product.product_name || 'Unknown Product';
-        const servingSizeString = product.serving_size || '100g';
-        const servingGrams = parseFloat(product.serving_quantity) || parseFloat(servingSizeString) || 100;
-        const macrosPer100g = {
-            p: nutrients.proteins_100g ?? 0,
-            c: nutrients.carbohydrates_100g ?? 0,
-            f: nutrients.fat_100g ?? 0
-        };
-        const foodData = {
-            baseName: productName,
-            servingGrams: servingGrams,
-            servingUnitName: servingSizeString,
-            macrosPer100g: macrosPer100g
-        };
-        populateAndShowMainForm(foodData);
+        document.getElementById('create-workout-section').style.display = 'block';
     }
     
-    function populateAndShowMainForm(foodData) {
-        addFoodItemForm.dataset.baseName = foodData.baseName;
-        addFoodItemForm.dataset.macrosPer100g = JSON.stringify(foodData.macrosPer100g);
-        addFoodItemForm.dataset.servingGrams = foodData.servingGrams;
-        foodItemNameInput.value = foodData.baseName;
-        foodSearchResultsContainer.innerHTML = '';
-        addFoodItemForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        foodItemUnitSelect.innerHTML = `<option value="serving">${foodData.servingUnitName || 'serving'}</option><option value="g">g</option>`;
-        foodItemQuantityInput.value = 1;
-        foodItemUnitSelect.value = 'serving';
-        foodMacroDetails.style.display = 'flex';
-        handleMacroRecalculation();
-    }
-    
-    function handleMacroRecalculation() {
-        const data = addFoodItemForm.dataset;
-        if (!data.macrosPer100g) return;
-        const macrosPer100g = JSON.parse(data.macrosPer100g);
-        const servingGrams = parseFloat(data.servingGrams);
-        const quantity = parseFloat(foodItemQuantityInput.value) || 0;
-        const unit = foodItemUnitSelect.value;
-        let totalGrams = (unit === 'g') ? quantity : (quantity * servingGrams);
-        const multiplier = totalGrams / 100;
-        foodItemFatInput.value = ((macrosPer100g.f || 0) * multiplier).toFixed(1);
-        foodItemCarbsInput.value = ((macrosPer100g.c || 0) * multiplier).toFixed(1);
-        foodItemProteinInput.value = ((macrosPer100g.p || 0) * multiplier).toFixed(1);
-    }
-    
-    const onScanSuccess = (decodedText) => {
-        stopScanner();
-        foodSearchResultsContainer.innerHTML = '<p class="search-meta-info">Searching for UPC...</p>';
-        foodApi.searchByUpc(decodedText).then(handleUpcSuccess).catch(handleApiError);
-    };
-    
-    const startScanner = () => {
-        scannerModal.style.display = 'flex';
-        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } }, onScanSuccess, () => {}).catch(err => {
-            alert("Error: Could not start camera. Please grant permissions.");
-            stopScanner();
-        });
-    };
-
-    const stopScanner = () => {
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().catch(err => console.error("Failed to stop scanner.", err));
-        }
-        scannerModal.style.display = 'none';
-    };
-
-    const handleApiError = (error) => {
-        const loader = document.getElementById('usda-search-loader');
-        if (loader) loader.remove();
-        foodSearchResultsContainer.innerHTML += `<p class="search-meta-info" style="color: var(--danger-color);">${error.message}</p>`;
-        console.error(error.message, error);
-    };
-
     // --- 5. EVENT BINDING ---
     function bindEvents() {
-        
-        foodLogEntries.addEventListener('click', async (e) => {
-            if (e.target.matches('.icon-btn')) e.preventDefault();
-            const entryDetails = e.target.closest('.food-item-details');
-            if (!entryDetails || !currentFoodLogDate) return;
-            const entryId = Number(entryDetails.dataset.entryId);
-            const log = getState().foodLogs[currentFoodLogDate];
-            if (!log) return;
-            const entry = log.items.find(item => item.id === entryId);
-            if (!entry) return;
-            if (e.target.matches('.icon-btn.delete')) {
-                const confirmed = await showConfirmation('Are you sure you want to delete this food entry?');
-                if (confirmed) {
-                    const entryIndex = log.items.findIndex(item => item.id === entryId);
-                    if (entryIndex > -1) {
-                        log.items.splice(entryIndex, 1);
-                        saveDataToFirebase();
-                        render();
-                    }
+        workoutLogEntries.addEventListener('click', async (e) => {
+            const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
+            if (!workout || workout.isFinished) return;
+            if (e.target.matches('.add-exercise-btn')) {
+                if (restTimerInterval) clearInterval(restTimerInterval);
+                activeRestTimer = { setId: null, startTime: 0 };
+                workout.exercises.push({ id: Date.now(), name: '', sets: [], isEditing: true });
+                renderLogEntries();
+                const newCard = workoutLogEntries.querySelector(`[data-exercise-id="${workout.exercises[workout.exercises.length-1].id}"]`);
+                if(newCard) newCard.querySelector('input').focus();
+            }
+            const exerciseCard = e.target.closest('.exercise-card');
+            if (!exerciseCard) return;
+            const exerciseId = Number(exerciseCard.dataset.exerciseId);
+            const exercise = workout.exercises.find(ex => ex.id === exerciseId);
+            if (!exercise) return;
+            if (e.target.matches('.add-set-btn')) {
+                if (restTimerInterval) clearInterval(restTimerInterval);
+                activeRestTimer = { setId: null, startTime: 0 };
+                const lastSet = exercise.sets[exercise.sets.length - 1];
+                exercise.sets.push({ id: Date.now(), weight: lastSet ? lastSet.weight : '', reps: lastSet ? lastSet.reps : '' });
+                renderLogEntries();
+            } else if (e.target.matches('.exercise-done-btn')) {
+                if (!exercise.name.trim()) {
+                    workout.exercises = workout.exercises.filter(ex => ex.id !== exerciseId);
+                } else {
+                    exercise.isEditing = false;
                 }
-            } else if (e.target.matches('.icon-btn.edit')) {
-                entry.isEditing = true;
-                render();
-                setTimeout(() => {
-                    const newRow = foodLogEntries.querySelector(`[data-entry-id="${entryId}"]`);
-                    if (newRow) {
-                        newRow.querySelector('.inline-edit-qty').focus();
-                        newRow.querySelector('.inline-edit-qty').select();
-                    }
-                }, 0);
-            } else if (e.target.matches('.icon-btn.cancel')) {
-                delete entry.isEditing;
-                render();
-            } else if (e.target.matches('.icon-btn.save')) {
-                const newQty = parseFloat(entryDetails.querySelector('.inline-edit-qty').value);
-                const newUnit = entryDetails.querySelector('.inline-edit-unit').value;
-                if (isNaN(newQty) || newQty <= 0) { alert("Please enter a valid, positive quantity."); return; }
-                const { macrosPer100g, servingGrams } = entry;
-                let totalGrams = (newUnit === 'g') ? newQty : (newQty * servingGrams);
-                const multiplier = totalGrams / 100;
-                entry.fat = (macrosPer100g.f || 0) * multiplier;
-                entry.carbs = (macrosPer100g.c || 0) * multiplier;
-                entry.protein = (macrosPer100g.p || 0) * multiplier;
-                entry.calories = (entry.fat * 9) + (entry.carbs * 4) + (entry.protein * 4);
-                entry.originalQty = newQty;
-                entry.unit = newUnit;
-                entry.name = `${entry.baseName} (${newQty} ${newUnit})`;
-                delete entry.isEditing;
                 saveDataToFirebase();
-                render();
-            }
-        });
-        
-        foodSearchResultsContainer.addEventListener('click', async (e) => {
-            const deleteBtn = e.target.closest('.icon-btn.delete');
-            if (deleteBtn) {
-                e.stopPropagation();
-                const foodNameToDelete = deleteBtn.dataset.foodNameDelete;
-                const confirmed = await showConfirmation(`Permanently delete "${foodNameToDelete}" from your saved foods?`);
-                if (confirmed) {
-                    getState().uniqueFoods = getState().uniqueFoods.filter(food => food.name !== foodNameToDelete);
+                renderLogEntries();
+            } else if (e.target.matches('.edit-exercise')) {
+                exercise.isEditing = true;
+                renderLogEntries();
+            } else if (e.target.matches('.delete-exercise')) {
+                if (await showConfirmation(`Delete all sets for ${exercise.name}?`)) {
+                    workout.exercises = workout.exercises.filter(ex => ex.id !== exerciseId);
                     saveDataToFirebase();
-                    foodItemNameInput.dispatchEvent(new Event('input'));
+                    renderLogEntries();
                 }
-                return;
-            }
-            const resultItem = e.target.closest('.search-result-item');
-            if (!resultItem) return;
-            if (resultItem.classList.contains('upc-result')) {
-                foodApi.searchByUpc(resultItem.dataset.upc).then(handleUpcSuccess).catch(handleApiError);
-            } else if (resultItem.dataset.foodData) {
-                populateAndShowMainForm(JSON.parse(resultItem.dataset.foodData));
+            } else if (e.target.matches('.delete-set')) {
+                const setRow = e.target.closest('.set-row');
+                const setId = Number(setRow.dataset.setId);
+                exercise.sets = exercise.sets.filter(set => set.id !== setId);
+                saveDataToFirebase();
+                renderLogEntries();
+            } else if (e.target.matches('.stepper-btn')) {
+                const setRow = e.target.closest('.set-row');
+                const input = setRow.querySelector(`input[data-field="${e.target.dataset.type}"]`);
+                const increment = Number(e.target.dataset.increment);
+                input.value = Math.max(0, (Number(input.value) || 0) + increment).toString();
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            } else if (e.target.matches('.complete-set-btn')) {
+                if (restTimerInterval) clearInterval(restTimerInterval);
+                const setRow = e.target.closest('.set-row');
+                const setId = Number(setRow.dataset.setId);
+                activeRestTimer = { setId, startTime: Date.now() };
+                renderLogEntries();
+                const timerDisplay = workoutLogEntries.querySelector('.rest-timer-inline-time');
+                if (timerDisplay) {
+                    timerDisplay.textContent = '00:00';
+                    restTimerInterval = setInterval(() => {
+                        timerDisplay.textContent = formatRestTime(Date.now() - activeRestTimer.startTime);
+                    }, 1000);
+                }
+            } else if (e.target.matches('.dismiss-rest-timer')) {
+                if (restTimerInterval) clearInterval(restTimerInterval);
+                activeRestTimer = { setId: null, startTime: 0 };
+                renderLogEntries();
             }
         });
         
-        deleteFoodLogBtn.addEventListener('click', async () => {
-            if (currentFoodLogDate) {
-                const confirmed = await showConfirmation("Are you sure you want to delete this entire day's food log?");
-                if (confirmed) {
-                    delete getState().foodLogs[currentFoodLogDate];
-                    currentFoodLogDate = null;
-                    selectedCalendarDate = getTodayDateString();
+        workoutLogEntries.addEventListener('input', (e) => {
+            const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
+            if (!workout) return;
+            const exerciseCard = e.target.closest('.exercise-card');
+            if (!exerciseCard) return;
+            const exerciseId = Number(exerciseCard.dataset.exerciseId);
+            const exercise = workout.exercises.find(ex => ex.id === exerciseId);
+            if (!exercise) return;
+            if (e.target.matches('.exercise-name-input')) {
+                activeExerciseInput = e.target;
+                exercise.name = e.target.value;
+                const query = e.target.value.toLowerCase();
+                const inputRect = activeExerciseInput.getBoundingClientRect();
+                exerciseSearchResults.style.top = `${inputRect.bottom + window.scrollY}px`;
+                exerciseSearchResults.style.left = `${inputRect.left + window.scrollX}px`;
+                exerciseSearchResults.style.width = `${inputRect.width}px`;
+                if (query.length < 1) { exerciseSearchResults.style.display = 'none'; return; }
+                const filtered = getState().exercises.filter(ex => ex.name.toLowerCase().includes(query));
+                exerciseSearchResults.innerHTML = filtered.map(ex => `<div class="search-result-item">${ex.name}</div>`).join('');
+                exerciseSearchResults.style.display = filtered.length > 0 ? 'block' : 'none';
+            }
+            const setRow = e.target.closest('.set-row');
+            if (setRow && e.target.matches('.inline-log-input')) {
+                const setId = Number(setRow.dataset.setId);
+                const set = exercise.sets.find(s => s.id === setId);
+                if (set) set[e.target.dataset.field] = e.target.value;
+            }
+            saveDataToFirebase();
+        });
+        
+        workoutLogEntries.addEventListener('blur', (e) => {
+             if (e.target.matches('.exercise-name-input')) {
+                 setTimeout(() => {
+                     if (document.activeElement.closest('.search-result-item')) return;
+                     exerciseSearchResults.style.display = 'none';
+                     const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
+                     if (!workout) return;
+                     const exerciseCard = e.target.closest('.exercise-card');
+                     const exerciseId = Number(exerciseCard.dataset.exerciseId);
+                     const exercise = workout.exercises.find(ex => ex.id === exerciseId);
+                     if (exercise && !exercise.name.trim()) {
+                         workout.exercises = workout.exercises.filter(ex => ex.id !== exerciseId);
+                         renderLogEntries();
+                     }
+                 }, 200);
+             }
+        }, true);
+        
+        exerciseSearchResults.addEventListener('click', (e) => {
+            if (e.target.matches('.search-result-item') && activeExerciseInput) {
+                const newName = e.target.textContent;
+                const exerciseCard = activeExerciseInput.closest('.exercise-card');
+                const exerciseId = Number(exerciseCard.dataset.exerciseId);
+                const workout = getState().workouts.find(w => w.date === currentWorkoutDate);
+                const exercise = workout.exercises.find(ex => ex.id === exerciseId);
+                if (exercise) {
+                    exercise.name = newName;
                     saveDataToFirebase();
-                    render();
+                    renderLogEntries();
                 }
+                exerciseSearchResults.style.display = 'none';
+                activeExerciseInput = null;
             }
         });
-        
-        addFoodItemForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (!currentFoodLogDate) return;
-            const baseName = addFoodItemForm.dataset.baseName;
-            if (!baseName) { alert("Please select a food from search or create a new custom food."); return; }
-            const fat = parseFloat(foodItemFatInput.value) || 0;
-            const carbs = parseFloat(foodItemCarbsInput.value) || 0;
-            const protein = parseFloat(foodItemProteinInput.value) || 0;
-            const unit = foodItemUnitSelect.value;
-            const originalQty = parseFloat(foodItemQuantityInput.value) || 1;
-            const newItem = {
-                id: Date.now(), name: `${baseName} (${originalQty} ${unit})`, meal: foodItemMealSelect.value,
-                fat, carbs, protein, calories: (fat * 9) + (carbs * 4) + (protein * 4), baseName,
-                macrosPer100g: JSON.parse(addFoodItemForm.dataset.macrosPer100g),
-                servingGrams: parseFloat(addFoodItemForm.dataset.servingGrams), originalQty, unit,
-            };
-            (getState().foodLogs[currentFoodLogDate].items = getState().foodLogs[currentFoodLogDate].items || []).push(newItem);
-            saveDataToFirebase();
-            render();
-            addFoodItemForm.reset();
-            foodMacroDetails.style.display = 'none';
-            setSmartMealDefault();
-            foodItemNameInput.focus();
-        });
 
-        foodItemNameInput.addEventListener('input', () => {
-            clearTimeout(usdaSearchTimeout);
-            const query = foodItemNameInput.value.trim();
-            foodSearchResultsContainer.innerHTML = '';
-            foodMacroDetails.style.display = 'none';
-            if (query.length < 2) return;
-            if (/^\d{8,}$/.test(query)) {
-                foodSearchResultsContainer.innerHTML = `<div class="search-result-item upc-result" data-upc="${query}"><strong style="color:var(--primary-color);">Search for UPC: ${query}</strong></div>`;
-                return;
-            }
-            const lowerCaseQuery = query.toLowerCase();
-            const filteredLocal = getState().uniqueFoods.filter(food => food.name.toLowerCase().includes(lowerCaseQuery));
-            let localResultsHTML = '';
-            if (filteredLocal.length > 0) {
-                localResultsHTML += '<h6 class="search-results-header">My Foods</h6>';
-                filteredLocal.forEach(food => {
-                    const foodData = { baseName: food.name, macrosPer100g: food.macrosPer100g, servingGrams: food.servingGrams, servingUnitName: food.servingUnitName };
-                    localResultsHTML += `<div class="search-result-item" data-food-data='${JSON.stringify(foodData)}'><span>${food.name}</span><button class="icon-btn delete" title="Delete Saved Food" data-food-name-delete="${food.name}">&#128465;</button></div>`;
-                });
-            }
-            foodSearchResultsContainer.innerHTML = localResultsHTML;
-            foodSearchResultsContainer.innerHTML += `<div id="usda-search-loader" class="search-meta-info"><p>Searching USDA database...</p></div>`;
-            usdaSearchTimeout = setTimeout(() => {
-                foodApi.searchUsda(lowerCaseQuery).then(foods => {
-                    const loader = document.getElementById('usda-search-loader');
-                    if(loader) loader.remove();
-                    if (!foods || foods.length === 0) return;
-                    let usdaResultsHTML = '<h6 class="search-results-header">USDA Database</h6>';
-                    foods.forEach(food => {
-                        const p = food.foodNutrients.find(n => n.nutrientId === 1003)?.value || 0;
-                        const f = food.foodNutrients.find(n => n.nutrientId === 1004)?.value || 0;
-                        const c = food.foodNutrients.find(n => n.nutrientId === 1005)?.value || 0;
-                        const foodData = { baseName: food.description, servingGrams: 100, servingUnitName: '100g', macrosPer100g: { p, c, f } };
-                        usdaResultsHTML += `<div class="search-result-item" data-food-data='${JSON.stringify(foodData)}'><strong>${food.description}</strong> <small>(per 100g) - P: ${p}g, C: ${c}g, F: ${f}g</small></div>`;
-                    });
-                    foodSearchResultsContainer.innerHTML += usdaResultsHTML;
-                }).catch(handleApiError);
-            }, 300);
-        });
-
-        customFoodForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            customFoodError.textContent = '';
-            const name = customFoodName.value.trim();
-            const servingSize = parseFloat(customServingSize.value);
-            const fat = parseFloat(customFat.value);
-            const carbs = parseFloat(customCarbs.value);
-            const protein = parseFloat(customProtein.value);
-            if (!name || !servingSize || servingSize <= 0) { customFoodError.textContent = 'Please fill out a valid name and positive serving size.'; return; }
-            if (isNaN(fat) || isNaN(carbs) || isNaN(protein)) { customFoodError.textContent = 'Please fill out all macro fields.'; return; }
-            const multiplier = 100 / servingSize;
-            const newUniqueFood = { name, macrosPer100g: { p: protein * multiplier, c: carbs * multiplier, f: fat * multiplier }, servingGrams: servingSize, servingUnitName: `${servingSize}g serving`, isCustom: true };
-            if (getState().uniqueFoods.some(food => food.name.toLowerCase() === newUniqueFood.name.toLowerCase())) { customFoodError.textContent = 'A custom food with this name already exists.'; return; }
-            getState().uniqueFoods.push(newUniqueFood);
-            saveDataToFirebase();
-            alert(`Successfully saved "${newUniqueFood.name}"!`);
-            closeCustomFoodModal();
-        });
-
-        showCustomFoodModalBtn.addEventListener('click', openCustomFoodModal);
-        customFoodModalCloseBtn.addEventListener('click', closeCustomFoodModal);
-        foodItemQuantityInput.addEventListener('input', handleMacroRecalculation);
-        foodItemUnitSelect.addEventListener('change', handleMacroRecalculation);
-        scanBarcodeBtn.addEventListener('click', startScanner);
-        scannerCloseBtn.addEventListener('click', stopScanner);
-        foodItemMealSelect.addEventListener('change', () => { lastSelectedMeal = foodItemMealSelect.value; });
-        foodCalendarPrevWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() - 7); render(); });
-        foodCalendarNextWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() + 7); render(); });
-        foodCalendarDaysGrid.addEventListener('click', (e) => { const dayEl = e.target.closest('.calendar-day'); if (dayEl) { selectedCalendarDate = dayEl.dataset.date; render(); } });
-        createFoodLogForm.addEventListener('submit', (e) => {
-            e.preventDefault();
+        startWorkoutBtn.addEventListener('click', () => {
             const date = selectedCalendarDate;
-            if (!getState().foodLogs[date]) {
-                getState().foodLogs[date] = { items: [], isFinished: false };
-            }
+            if (getState().workouts.some(w => w.date === date)) { alert('A workout for this date already exists.'); return; }
+            const newWorkout = { date, bodyweight: workoutBodyweightInput.value, category: workoutCategorySelect.value, exercises: [], isFinished: false, startTime: Date.now() };
+            getState().workouts.push(newWorkout);
             saveDataToFirebase();
             render();
         });
-        prevFoodLogBtn.addEventListener('click', () => { const s = Object.keys(getState().foodLogs).sort((a,b)=>new Date(b)-new Date(a)); const i = s.indexOf(currentFoodLogDate); if (i < s.length - 1) { selectedCalendarDate = s[i+1]; render(); } });
-        nextFoodLogBtn.addEventListener('click', () => { const s = Object.keys(getState().foodLogs).sort((a,b)=>new Date(b)-new Date(a)); const i = s.indexOf(currentFoodLogDate); if (i > 0) { selectedCalendarDate = s[i-1]; render(); } });
-        finishFoodLogBtn.addEventListener('click', () => { const l = getState().foodLogs[currentFoodLogDate]; if (l) { l.isFinished = true; saveDataToFirebase(); render(); } });
-        editFoodLogBtn.addEventListener('click', () => { const l = getState().foodLogs[currentFoodLogDate]; if (l) { l.isFinished = false; saveDataToFirebase(); render(); } });
+        calendarDaysGrid.addEventListener('click', (e) => { const dayEl = e.target.closest('.calendar-day'); if (dayEl) { selectedCalendarDate = dayEl.dataset.date; render(); } });
+        calendarPrevWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() - 7); render(); });
+        calendarNextWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() + 7); render(); });
+        prevWorkoutBtn.addEventListener('click', () => { const s = getState().workouts.sort((a, b) => new Date(b.date) - new Date(a.date)); const i = s.findIndex(w => w.date === currentWorkoutDate); if (i < s.length - 1) { selectedCalendarDate = s[i + 1].date; render(); } });
+        nextWorkoutBtn.addEventListener('click', () => { const s = getState().workouts.sort((a, b) => new Date(b.date) - new Date(a.date)); const i = s.findIndex(w => w.date === currentWorkoutDate); if (i > 0) { selectedCalendarDate = s[i - 1].date; render(); } });
+        deleteWorkoutBtn.addEventListener('click', async () => { if (await showConfirmation("Delete entire workout log?")) { getState().workouts = getState().workouts.filter(w => w.date !== currentWorkoutDate); selectedCalendarDate = currentWorkoutDate; currentWorkoutDate = null; saveDataToFirebase(); render(); } });
+        finishWorkoutBtn.addEventListener('click', () => { const w = getState().workouts.find(w => w.date === currentWorkoutDate); if (w) { w.exercises.forEach(ex => ex.isEditing = false); if (workoutTimerInterval) clearInterval(workoutTimerInterval); if (w.startTime && !w.duration) w.duration = Date.now() - w.startTime; w.isFinished = true; saveDataToFirebase(); render(); } });
+        editWorkoutBtn.addEventListener('click', () => { const w = getState().workouts.find(w => w.date === currentWorkoutDate); if (w) { w.isFinished = false; w.exercises.forEach(ex => ex.isEditing = true); saveDataToFirebase(); render(); } });
+        editBodyweightBtn.addEventListener('click', () => { const w = getState().workouts.find(w => w.date === currentWorkoutDate); if (!w) return; const nBw = prompt("Enter new body weight (lbs):", w.bodyweight || ''); if (nBw !== null) { w.bodyweight = parseFloat(nBw) || ''; saveDataToFirebase(); render(); } });
+        summaryCategorySelect.addEventListener('change', (e) => renderSummary(e.target.value));
+        workoutCategorySelect.addEventListener('change', (e) => { summaryCategorySelect.value = e.target.value; renderSummary(e.target.value); });
     }
-
+    
     // --- 6. INITIALIZATION ---
     function init(api) {
         db = api.db;
         getState = api.getState;
         saveDataToFirebase = api.saveDataToFirebase;
         getTodayDateString = api.getTodayDateString;
-        foodApi = api.foodApi;
-        calculateCurrentGoals = api.calculateCurrentGoals;
         formatDate = api.formatDate;
         showConfirmation = api.showConfirmation;
         selectedCalendarDate = getTodayDateString();
-        foodLogDateInput.value = selectedCalendarDate;
-        html5QrCode = new Html5Qrcode("barcode-reader");
+        workoutCategorySelect.innerHTML = CATEGORIES.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+        summaryCategorySelect.innerHTML = CATEGORIES.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+        renderSummary(summaryCategorySelect.value);
         bindEvents();
-        setSmartMealDefault();
     }
-
     return { init, render };
 }
