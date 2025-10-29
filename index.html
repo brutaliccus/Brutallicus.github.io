@@ -454,6 +454,18 @@
                     <button type="submit" class="btn-primary">Save Custom Food</button>
                     <button type="button" id="custom-food-modal-close-btn" class="btn-secondary">Cancel</button>
                 </div>
+				<div id="workout-selection-modal" class="modal-overlay">
+					<div class="modal-content">
+						<h3 id="workout-selection-title">Workouts for [Date]</h3>
+						<div id="workout-selection-list">
+            <!-- JS will populate this with the day's workouts -->
+						</div>
+						<div class="form-actions" style="justify-content: space-between; margin-top: 1.5rem;">
+							<button id="workout-selection-close-btn" class="btn-secondary">Cancel</button>
+							<button id="workout-selection-new-btn" class="btn-primary">Start New Workout</button>
+						</div>
+					</div>
+				</div>
                 <p id="custom-food-error" class="auth-error"></p>
             </form>
         </div>

@@ -1391,4 +1391,52 @@ body.theme-dark .pr-category-group {
     border-radius: 6px;
     border: 1px solid var(--border-color);
 }
-/* All the coloring and value/label styles remain the same */
+.calendar-bar-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 3px;
+    padding: 0 3px;
+    box-sizing: border-box;
+    margin-top: 4px;
+}
+
+/* Re-styled workout bar to show text again */
+.calendar-workout-bar {
+    width: 100%;
+    border: none;
+    color: white;
+    font-size: 0.7em;
+    font-weight: bold;
+    padding: 3px 2px;
+    border-radius: 3px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: filter 0.2s;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.calendar-workout-bar:hover {
+    filter: brightness(1.15);
+}
+
+/* Make sure the day number is on top of the bars */
+.day-number {
+    z-index: 2;
+}
+
+/* Your existing color classes for categories will still work */
+.calendar-workout-bar.category-push { background-color: #d32f2f; }
+.calendar-workout-bar.category-pull { background-color: #7b1fa2; }
+.calendar-workout-bar.category-legs { background-color: #388e3c; }
+.calendar-workout-bar.category-other { background-color: #f57c00; }
+.calendar-workout-bar.category-upper-body { background-color: #17a2b8; }
+.calendar-workout-bar.category-lower-body { background-color: #6f42c1; }
+.calendar-workout-bar.category-full-body { 
+    background-color: #f8f9fa;
+    color: #212529;
+    border: 1px solid #adb5bd;
+}
