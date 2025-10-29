@@ -168,29 +168,38 @@
             <div id="tab-manage-exercises" class="tab-content">
                 <h2>Manage Exercises</h2>
                 <section class="card">
-                    <h3>Add New Exercise</h3>
-                    <form id="add-exercise-form">
-                        <div class="form-group">
-                            <label for="new-exercise-name">Exercise Name:</label>
-                            <input type="text" id="new-exercise-name" placeholder="e.g., Bench Press" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="new-exercise-category">Category:</label>
-                            <select id="new-exercise-category"></select>
-                        </div>
-                        <div class="form-actions">
-                            <button type="submit" class="btn-primary">Add Exercise</button>
-                            <button type="button" id="import-csv-btn" class="btn-secondary" title="Import a CSV file with 'exercise' and 'category' headers.">
-                                Import CSV
-                            </button>
-                            <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
-                        </div>
-                    </form>
-                </section>
-                <section class="card">
-                    <h3>Exercise List</h3>
-                    <div id="exercise-list-layout"></div>
-                </section>
+    <h3>Add New Exercise</h3>
+    <form id="add-exercise-form">
+        <div class="form-row">
+            <div class="form-group" style="flex-grow: 2;">
+                <label for="new-exercise-name">Exercise Name</label>
+                <input type="text" id="new-exercise-name" placeholder="e.g., Bench Press" required>
+            </div>
+            <div class="form-group">
+                <label for="new-exercise-primary">Primary Muscle</label>
+                <input type="text" id="new-exercise-primary" list="muscle-list-data" placeholder="e.g., Chest" required>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="new-exercise-secondary">Secondary Muscles (comma-separated)</label>
+            <input type="text" id="new-exercise-secondary" placeholder="e.g., Shoulders, Triceps">
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Exercise</button>
+            <button type="button" id="import-csv-btn" class="btn-secondary" title="Import a CSV file with 'name,primaryMuscle,secondaryMuscles' headers.">
+                Import CSV
+            </button>
+            <input type="file" id="csv-file-input" accept=".csv" style="display: none;">
+        </div>
+    </form>
+</section>
+
+<section class="card">
+    <h3>Your Exercise Library</h3>
+    <div id="exercise-list-container">
+        <!-- The new exercise list/table will be rendered here -->
+    </div>
+</section>
             </div>
             <div id="tab-food-log" class="tab-content">
                 <section id="create-food-log-section" class="card">
@@ -295,6 +304,23 @@
             </div>
             <div id="tab-my-progress" class="tab-content">
                 <h2>My Progress</h2>
+	    <section id="weekly-summary-section">
+    <div class="weekly-nav-header">
+        <button id="week-nav-prev" class="nav-arrow" title="Previous Week">&#9664;</button>
+        <h3 id="week-display">This Week</h3>
+        <button id="week-nav-next" class="nav-arrow" title="Next Week" disabled>&#9654;</button>
+    </div>
+    <div class="weekly-summary-grid">
+        <div id="weekly-set-volume-card" class="card">
+            <h4>Set Volume by Muscle</h4>
+            <div id="set-volume-list"></div>
+        </div>
+        <div id="weekly-nutrition-card" class="card">
+            <h4>Average Daily Nutrition</h4>
+            <div id="nutrition-summary-list"></div>
+        </div>
+    </div>
+</section>
                 <p>Use your mouse wheel to zoom and click-and-drag to pan the charts.</p>
                 <div class="progress-charts-layout">
                     <div class="card">
@@ -406,6 +432,18 @@
 	            </div>
 	        </div>
 	    </div>
+	    <div id="workout-selection-modal" class="modal-overlay">
+    		<div class="modal-content">
+        	    <h3 id="workout-selection-title">Workouts for [Date]</h3>
+        	    <div id="workout-selection-list">
+            <!-- JS will populate this with the day's workouts -->
+        	    </div>
+        	    <div class="form-actions" style="justify-content: space-between; margin-top: 1.5rem;">
+            		<button id="workout-selection-close-btn" class="btn-secondary">Cancel</button>
+            		<button id="workout-selection-new-btn" class="btn-primary">Start New Workout</button>
+        	    </div>
+    		</div>
+	    </div>
         </main>
     </div>
     <datalist id="exercise-list-data"></datalist>
@@ -454,22 +492,37 @@
                     <button type="submit" class="btn-primary">Save Custom Food</button>
                     <button type="button" id="custom-food-modal-close-btn" class="btn-secondary">Cancel</button>
                 </div>
-				<div id="workout-selection-modal" class="modal-overlay">
-					<div class="modal-content">
-						<h3 id="workout-selection-title">Workouts for [Date]</h3>
-						<div id="workout-selection-list">
-            <!-- JS will populate this with the day's workouts -->
-						</div>
-						<div class="form-actions" style="justify-content: space-between; margin-top: 1.5rem;">
-							<button id="workout-selection-close-btn" class="btn-secondary">Cancel</button>
-							<button id="workout-selection-new-btn" class="btn-primary">Start New Workout</button>
-						</div>
-					</div>
-				</div>
                 <p id="custom-food-error" class="auth-error"></p>
             </form>
         </div>
     </div>
+<div id="edit-exercise-modal" class="modal-overlay">
+    <div class="modal-content">
+        <form id="edit-exercise-form">
+            <h2>Edit Exercise</h2>
+            <input type="hidden" id="edit-exercise-id">
+            <div class="form-group">
+                <label for="edit-exercise-name">Exercise Name</label>
+                <input type="text" id="edit-exercise-name" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-exercise-primary">Primary Muscle</label>
+                <input type="text" id="edit-exercise-primary" list="muscle-list-data" required>
+            </div>
+            <div class="form-group">
+                <label for="edit-exercise-secondary">Secondary Muscles (comma-separated)</label>
+                <input type="text" id="edit-exercise-secondary">
+            </div>
+            <div class="form-actions" style="justify-content: flex-end;">
+                <button type="button" id="edit-exercise-cancel-btn" class="btn-secondary">Cancel</button>
+                <button type="submit" class="btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- A single datalist for muscle group autocomplete -->
+<datalist id="muscle-list-data"></datalist>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="predefined-exercises.js"></script>

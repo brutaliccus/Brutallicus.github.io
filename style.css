@@ -1152,14 +1152,18 @@ body:not(.theme-dark) .pr-metric.metric-heavy-lift .pr-metric-value {
     padding: 1rem;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
+body.theme-dark .exercise-card {
+    color: var(--text-color-light);
+}
 
 /* Header within the card holding the exercise name and action buttons */
 .exercise-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 0.75rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem; /* <-- Reduced from 1rem */
 }
 
 .exercise-header h4 {
@@ -1391,16 +1395,72 @@ body.theme-dark .pr-category-group {
     border-radius: 6px;
     border: 1px solid var(--border-color);
 }
+/* All the coloring and value/label styles remain the same */
+#workout-selection-modal .modal-content {
+    text-align: left;
+}
+
+#workout-selection-list {
+    margin-top: 1.5rem;
+    max-height: 40vh;
+    overflow-y: auto;
+}
+
+.workout-selection-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.workout-selection-item:hover {
+    background-color: var(--background-color);
+    border-color: var(--primary-color);
+}
+
+.workout-selection-item-info {
+    font-weight: bold;
+}
+.workout-selection-item-info span {
+    font-weight: normal;
+    color: var(--secondary-color);
+    font-size: 0.9em;
+    margin-left: 0.5rem;
+}
+
+.calendar-day {
+    /* We reset some flex properties to have more control */
+    display: flex;
+    flex-direction: column;
+    align-items: stretch; /* Make children fill the width */
+    justify-content: flex-start; /* Align everything to the top */
+    position: relative;
+    padding: 4px; /* Overall padding for the day cell */
+    min-height: 90px;
+}
+
+.day-number {
+    /* No longer absolute, just a simple element at the top */
+    font-size: 0.9em;
+    padding-left: 4px; /* Indent it slightly */
+    height: 20px; /* Give it a fixed height */
+}
+
+/* Container for multiple bars - gap provides spacing now */
 .calendar-bar-container {
     display: flex;
     flex-direction: column;
     width: 100%;
-    gap: 3px;
-    padding: 0 3px;
+    gap: 3px; /* Space between bars */
+    padding: 0;
     box-sizing: border-box;
-    margin-top: 4px;
+    /* margin-top is no longer needed as the flexbox handles it */
 }
-
 /* Re-styled workout bar to show text again */
 .calendar-workout-bar {
     width: 100%;
@@ -1439,4 +1499,199 @@ body.theme-dark .pr-category-group {
     background-color: #f8f9fa;
     color: #212529;
     border: 1px solid #adb5bd;
+}
+ * 1. Global best practice: Makes layout math more intuitive. 
+ * This tells the browser to include padding and border in the element's total width and height.
+ */
+html {
+  box-sizing: border-box;
+}
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
+/* 
+ * 2. The main fix for the food log: Allows the row of macro inputs to wrap.
+ * This prevents them from forcing the page to be wider than the screen.
+ */
+.log-inputs {
+    flex-wrap: wrap;
+}
+
+/* 
+ * 3. Safety net: Ensures that very long words (like a long food name) 
+ * will break onto the next line instead of overflowing.
+ */
+.food-name, .exercise-header h4 {
+    overflow-wrap: break-word;
+    word-break: break-word; /* For better browser compatibility */
+}
+/* Style for the summarized set display */
+.sets-summary-display {
+    padding: 0.5rem 0 0.5rem 1.5rem;
+    line-height: 1.7;
+    font-size: 1.05em;
+    color: inherit; /* This makes it inherit the new white color from .exercise-card */
+}
+#exercise-list-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+/*
+ * THIS IS THE MAIN FIX:
+ * We are overriding the old `.exercise-item` style.
+ * The card itself is a block, not a flex row.
+ */
+#exercise-list-container .exercise-item {
+    display: block; /* Override old display:flex */
+    margin-bottom: 0; /* Let the grid gap handle spacing */
+}
+
+/* Header for each card: Contains title and action buttons */
+.exercise-display-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.75rem;
+}
+
+.exercise-display-header h4 {
+    margin: 0;
+    font-size: 1.3em;
+    overflow-wrap: break-word; /* Safety for long names */
+}
+
+.exercise-display-header .actions {
+    display: flex;
+    flex-shrink: 0; /* Prevent buttons from wrapping */
+    gap: 0.5rem;
+    margin-left: 1rem;
+}
+
+/* Body of the card containing muscle info */
+.exercise-display-body p {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.95em;
+}
+
+.exercise-display-body strong {
+    color: var(--secondary-color);
+    display: inline-block;
+    width: 100px;
+}
+
+.secondary-muscles {
+    text-transform: capitalize;
+}
+
+/* --- STYLES FOR WEEKLY SUMMARY SECTION --- */
+
+#weekly-summary-section h2 {
+    font-size: 1.8em;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+}
+
+.weekly-nav-header { 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    gap: 1.5rem; 
+    margin-bottom: 1rem; 
+}
+
+.weekly-nav-header h3 { 
+    margin: 0; 
+}
+
+.weekly-summary-grid { 
+    display: grid; 
+    grid-template-columns: 2fr 1fr; /* Adjusted ratio for better balance */
+    gap: 1.5rem; 
+}
+
+#set-volume-list {
+    column-count: 3;
+    column-gap: 2.5rem; /* Increased gap for better readability */
+}
+
+/* CORRECTED: This rule was incomplete */
+.set-volume-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    break-inside: avoid; /* Prevents items from splitting across columns */
+}
+
+.set-volume-item .muscle-name {
+    font-weight: bold;
+    text-transform: capitalize;
+}
+
+.set-volume-item .set-count {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-left: 1rem; /* Ensures space between name and count */
+}
+
+.set-volume-item .set-count small {
+    font-size: 0.7em;
+    color: var(--secondary-color);
+}
+
+/* --- STYLES FOR WEEKLY NUTRITION SUMMARY CARD --- */
+
+#nutrition-summary-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+}
+
+.nutrition-summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 1.1em;
+}
+
+.nutrition-summary-item span:first-child {
+    color: var(--secondary-color);
+    font-weight: bold;
+}
+
+.nutrition-summary-value {
+    font-weight: bold;
+    font-size: 1.3em;
+}
+
+.nutrition-summary-value.macro-red { color: var(--danger-color); }
+.nutrition-summary-value.macro-green { color: var(--success-color); }
+.nutrition-summary-value.macro-yellow { color: var(--warning-color); }
+.nutrition-summary-value.macro-default { color: var(--text-color); }
+
+/* --- RESPONSIVE STYLES FOR WEEKLY SUMMARY --- */
+
+@media (max-width: 900px) {
+    .weekly-summary-grid { 
+        grid-template-columns: 1fr; 
+    }
+    #set-volume-list { 
+        column-count: 2; 
+    }
+}
+
+@media (max-width: 500px) {
+    #set-volume-list { 
+        column-count: 1; 
+    }
 }
