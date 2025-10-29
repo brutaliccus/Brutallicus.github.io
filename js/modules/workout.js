@@ -99,53 +99,64 @@ function createWorkoutModule() {
         </div>`;
 
     function renderLogEntries() {
-        const workout = getState().workouts.find(w => w.id === currentWorkoutId);
-        if (!workout) {
-            workoutLogEntries.innerHTML = '';
-            return;
-        }
-        workout.exercises = migrateExerciseData(workout.exercises);
+    const workout = getState().workouts.find(w => w.id === currentWorkoutId);
+    if (!workout) {
         workoutLogEntries.innerHTML = '';
-        const isWorkoutFinished = workout.isFinished || false;
-        workout.exercises.forEach(exercise => {
-            const exerciseCard = document.createElement('div');
-            exerciseCard.className = 'exercise-card';
-            exerciseCard.dataset.exerciseId = exercise.id;
-            const isNameSetAndNotEditing = exercise.name && !exercise.isEditing;
-            let headerHTML = `<div class="exercise-header">${isNameSetAndNotEditing
-                ? `<h4>${exercise.name}</h4><div class="actions">${!isWorkoutFinished ? `<button class="icon-btn edit-exercise" title="Edit Exercise">&#9998;</button><button class="icon-btn delete-exercise" title="Delete Exercise">&#128465;</button>` : ''}</div>`
-                : `<input type="text" class="inline-log-input exercise-name-input" placeholder="Enter Exercise Name..." value="${exercise.name || ''}" autocomplete="off">`}</div>`;
-            let bodyHTML = '<div class="set-list">';
-            if (exercise.name) {
-                if (exercise.sets.length > 0) bodyHTML += `<div class="set-row-header"><span>WEIGHT (LBS)</span><span>REPS</span></div>`;
+        return;
+    }
+    workout.exercises = migrateExerciseData(workout.exercises);
+    workoutLogEntries.innerHTML = '';
+    const isWorkoutFinished = workout.isFinished || false;
+
+    workout.exercises.forEach(exercise => {
+        const exerciseCard = document.createElement('div');
+        exerciseCard.className = 'exercise-card';
+        exerciseCard.dataset.exerciseId = exercise.id;
+        const isNameSetAndNotEditing = exercise.name && !exercise.isEditing;
+
+        // Render the header (unchanged)
+        let headerHTML = `<div class="exercise-header">${isNameSetAndNotEditing
+            ? `<h4>${exercise.name}</h4><div class="actions">${!isWorkoutFinished ? `<button class="icon-btn edit-exercise" title="Edit Exercise">&#9998;</button><button class="icon-btn delete-exercise" title="Delete Exercise">&#128465;</button>`:''}</div>`
+            : `<input type="text" class="inline-log-input exercise-name-input" placeholder="Enter Exercise Name..." value="${exercise.name || ''}" autocomplete="off">`}</div>`;
+        
+        let bodyHTML = '<div class="set-list">';
+        if (exercise.name) {
+            // =========================================================================
+            //  NEW LOGIC: If the exercise is "done", show the summary. Otherwise, show the inputs.
+            // =========================================================================
+            if (isNameSetAndNotEditing || isWorkoutFinished) {
+                // RENDER THE SUMMARY VIEW
+                const summaryString = createSetsSummaryString(exercise.sets);
+                bodyHTML += `<div class="sets-summary-display">${summaryString}</div>`;
+            } else {
+                // RENDER THE EDITING VIEW
+                if (exercise.sets.length > 0) {
+                    bodyHTML += `<div class="set-row-header"><span>WEIGHT (LBS)</span><span>REPS</span></div>`;
+                }
                 exercise.sets.forEach((set, index) => {
-                    let setRowHTML = '';
-                    if (isNameSetAndNotEditing || isWorkoutFinished) {
-                        setRowHTML = `<div class="set-row"><span class="set-number">${index + 1}</span><span>${set.weight || 0}</span><span>${set.reps || 0}</span></div>`;
-                    } else {
-                        setRowHTML = `<div class="set-row" data-set-id="${set.id}"><span class="set-number">${index + 1}</span>${createStepperInput('weight', set.weight, 5)}${createStepperInput('reps', set.reps, 1)}<button class="icon-btn complete-set-btn" title="Complete Set">&#10004;</button><button class="icon-btn delete-set" title="Delete Set">&#10006;</button></div>`;
-                    }
+                    let setRowHTML = `<div class="set-row" data-set-id="${set.id}"><span class="set-number">${index + 1}</span>${createStepperInput('weight', set.weight, 5)}${createStepperInput('reps', set.reps, 1)}<button class="icon-btn complete-set-btn" title="Complete Set">&#10004;</button><button class="icon-btn delete-set" title="Delete Set">&#10006;</button></div>`;
                     if (activeRestTimer.setId === set.id) {
                         setRowHTML += `<div class="rest-timer-inline"><span class="rest-timer-inline-time">00:00</span><div class="rest-timer-inline-actions"><button class="btn-secondary dismiss-rest-timer">Dismiss</button></div></div>`;
                     }
                     bodyHTML += setRowHTML;
                 });
-                if (!isNameSetAndNotEditing && !isWorkoutFinished) {
-                    bodyHTML += `<div class="add-set-btn-container"><button class="add-set-btn" title="Add Set">+</button></div>`;
-                }
+                bodyHTML += `<div class="add-set-btn-container"><button class="add-set-btn" title="Add Set">+</button></div>`;
             }
-            bodyHTML += '</div>';
-            let footerHTML = (exercise.name && exercise.isEditing) ? `<div class="exercise-done-btn-container"><button class="btn-primary exercise-done-btn">Done</button></div>` : '';
-            exerciseCard.innerHTML = headerHTML + bodyHTML + footerHTML;
-            workoutLogEntries.appendChild(exerciseCard);
-        });
-        if (!isWorkoutFinished && currentWorkoutId) {
-            const addExerciseRow = document.createElement('div');
-            addExerciseRow.className = 'add-exercise-row';
-            addExerciseRow.innerHTML = `<button class="add-exercise-btn" title="Add New Exercise">+</button>`;
-            workoutLogEntries.appendChild(addExerciseRow);
         }
+        bodyHTML += '</div>'; // close .set-list
+        
+        let footerHTML = (exercise.name && exercise.isEditing) ? `<div class="exercise-done-btn-container"><button class="btn-primary exercise-done-btn">Done</button></div>` : '';
+        exerciseCard.innerHTML = headerHTML + bodyHTML + footerHTML;
+        workoutLogEntries.appendChild(exerciseCard);
+    });
+
+    if (!isWorkoutFinished && currentWorkoutId) {
+        const addExerciseRow = document.createElement('div');
+        addExerciseRow.className = 'add-exercise-row';
+        addExerciseRow.innerHTML = `<button class="add-exercise-btn" title="Add New Exercise">+</button>`;
+        workoutLogEntries.appendChild(addExerciseRow);
     }
+}
     
     function renderCurrentWorkoutView() {
         const workout = getState().workouts.find(w => w.id === currentWorkoutId);
