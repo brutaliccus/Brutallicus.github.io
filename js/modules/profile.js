@@ -1,7 +1,7 @@
+// js/modules/profile.js (V3 - Corrected PR Logic for New Data Model - UNTRUNCATED)
 function createProfileModule() {
-    // --- 1. MODULE SCOPE VARIABLES & DOM REFERENCES ---
-    let db, getState, saveDataToFirebase, calculateCurrentGoals, formatDate, calculateE1RM;
-
+    // --- 1. MODULE SCOPE & REFERENCES ---
+    let db, getState, saveDataToFirebase, calculateCurrentGoals, formatDate, calculateE1RM, showConfirmation;
     const prContainer = document.getElementById('pr-container');
     const aboutMeForm = document.getElementById('about-me-form');
     const aboutSex = document.getElementById('about-sex');
@@ -15,59 +15,112 @@ function createProfileModule() {
     const editAboutMeBtn = document.getElementById('edit-about-me-btn');
     const resetWeightHistoryBtn = document.getElementById('reset-weight-history-btn');
 
-    const CATEGORIES = ['Push', 'Pull', 'Legs', 'Other'];
+    // --- 2. HELPER FUNCTIONS ---
 
+    // A copy of the migration function is needed here to read old data formats correctly.
+    function migrateExerciseData(exercises) {
+        if (!exercises || !Array.isArray(exercises) || exercises.length === 0) return [];
+        const firstValidItem = exercises.find(ex => ex);
+        if (!firstValidItem || Array.isArray(firstValidItem.sets)) {
+            return exercises; // Already new format or is empty/invalid
+        }
+        const map = new Map();
+        exercises.forEach(old => {
+            if(!old.name) return;
+            if(!map.has(old.name)) {
+                map.set(old.name, { 
+                    id: old.id || Date.now() + Math.random(), 
+                    name: old.name, 
+                    isEditing: false, 
+                    sets:[] 
+                });
+            }
+            const ex = map.get(old.name);
+            const numSets = parseInt(old.sets, 10) || 1;
+            for(let i=0; i < numSets; i++) {
+                ex.sets.push({
+                    id: Date.now() + Math.random(), 
+                    weight: old.weight || '', 
+                    reps: old.reps || ''
+                });
+            }
+        });
+        return Array.from(map.values());
+    }
 
-    // --- 2. CORE FUNCTIONS ---
+    // --- 3. CORE FUNCTIONS ---
 
+    /**
+     * REWRITTEN: Calculates and renders PRs, now compatible with the new set-based
+     * data model and grouping by primary muscle.
+     */
     function calculateAndRenderPRs() {
         const prs = {};
-        const { workouts, exercises } = getState();
+        const allWorkouts = getState().workouts;
+        const masterExerciseList = getState().exercises;
 
-        // 1. Iterate through all workouts to find the best lift and best e1RM for each exercise.
-        workouts.forEach(workout => {
-            (workout.exercises || []).forEach(entry => {
-                if (!prs[entry.name]) {
-                    prs[entry.name] = { name: entry.name, heavyLift: 0, bestE1RM: 0 };
-                }
-                const weight = parseFloat(entry.weight);
-                const reps = parseInt(entry.reps, 10);
+        // 1. Loop through all workouts and all sets to find the best numbers.
+        allWorkouts.forEach(workout => {
+            const exercisesInWorkout = migrateExerciseData(workout.exercises);
 
-                if (weight > prs[entry.name].heavyLift) {
-                    prs[entry.name].heavyLift = weight;
-                }
+            exercisesInWorkout.forEach(exercise => {
+                if (!exercise.name) return;
 
-                const currentE1RM = calculateE1RM(weight, reps);
-                if (currentE1RM > prs[entry.name].bestE1RM) {
-                    prs[entry.name].bestE1RM = currentE1RM;
-                }
+                (exercise.sets || []).forEach(set => {
+                    if (!prs[exercise.name]) {
+                        prs[exercise.name] = { name: exercise.name, heavyLift: 0, bestE1RM: 0 };
+                    }
+
+                    const weight = parseFloat(set.weight) || 0;
+                    const reps = parseInt(set.reps, 10) || 0;
+
+                    if (weight > prs[exercise.name].heavyLift) {
+                        prs[exercise.name].heavyLift = weight;
+                    }
+
+                    const currentE1RM = calculateE1RM(weight, reps);
+                    if (currentE1RM > prs[exercise.name].bestE1RM) {
+                        prs[exercise.name].bestE1RM = currentE1RM;
+                    }
+                });
             });
         });
-
-        // 2. Group the calculated PRs by category
-        const exerciseCategoryMap = exercises.reduce((map, ex) => {
-            map[ex.name.trim().toLowerCase()] = ex.category;
+        
+        // 2. Group the calculated PRs by primary muscle from the master exercise list.
+        const exerciseMuscleMap = masterExerciseList.reduce((map, ex) => {
+            map[ex.name.toLowerCase()] = ex.primaryMuscle || 'Uncategorized';
             return map;
         }, {});
+        
+        const groupedPRs = {};
+        const allMuscles = [...new Set(masterExerciseList.map(ex => ex.primaryMuscle || 'Uncategorized'))];
+        allMuscles.forEach(m => { groupedPRs[m] = []; });
 
-        const groupedPRs = { Push: [], Pull: [], Legs: [], Other: [] };
         for (const exerciseName in prs) {
-            const category = exerciseCategoryMap[exerciseName.trim().toLowerCase()] || 'Other';
-            groupedPRs[category].push(prs[exerciseName]);
+            const muscleGroup = exerciseMuscleMap[exerciseName.toLowerCase()] || 'Uncategorized';
+            if (groupedPRs[muscleGroup]) {
+                groupedPRs[muscleGroup].push(prs[exerciseName]);
+            } else {
+                if (!groupedPRs['Uncategorized']) groupedPRs['Uncategorized'] = [];
+                groupedPRs['Uncategorized'].push(prs[exerciseName]);
+            }
         }
-
-        // 3. Render the new PR cards
+        
+        // 3. Render the PR cards, grouped by muscle.
         prContainer.innerHTML = '';
         let hasPRs = false;
+        const sortedGroups = Object.keys(groupedPRs).sort((a,b) => {
+            if (a === 'Uncategorized') return 1; // Always sort 'Uncategorized' to the end
+            if (b === 'Uncategorized') return -1;
+            return a.localeCompare(b);
+        });
 
-        CATEGORIES.forEach(category => {
-            const categoryPRs = groupedPRs[category];
-            if (categoryPRs.length > 0) {
+        sortedGroups.forEach(muscleGroup => {
+            const groupPRs = groupedPRs[muscleGroup];
+            if (groupPRs && groupPRs.length > 0) {
                 hasPRs = true;
-                categoryPRs.sort((a, b) => a.name.localeCompare(b.name));
-
-                // This section generates the HTML with the necessary classes for styling
-                const categoryHtml = categoryPRs.map(pr => `
+                groupPRs.sort((a, b) => a.name.localeCompare(b.name));
+                const cardsHTML = groupPRs.map(pr => `
                     <div class="card">
                         <h4>${pr.name}</h4>
                         <div class="pr-card-metrics">
@@ -85,8 +138,8 @@ function createProfileModule() {
                 
                 prContainer.innerHTML += `
                     <div class="pr-category-group">
-                        <h2>${category}</h2>
-                        <div class="pr-layout">${categoryHtml}</div>
+                        <h2>${muscleGroup}</h2>
+                        <div class="pr-layout">${cardsHTML}</div>
                     </div>
                 `;
             }
@@ -96,25 +149,18 @@ function createProfileModule() {
             prContainer.innerHTML = '<p>No personal records found. Go lift some weights!</p>';
         }
     }
-
-    /**
-     * Calculates and displays the user's calorie and macro goals.
-     */
     function calculateAndDisplayCalories() {
         const { goals, weightUsed, maintenance } = calculateCurrentGoals();
         let goalType = "Maintain Weight";
         const goalWeight = parseFloat(aboutGoalWeight.value) || 0;
-
         if (goalWeight > 0 && weightUsed > 0) {
             if (goalWeight < weightUsed) goalType = "Lose Weight";
             else if (goalWeight > weightUsed) goalType = "Gain Weight";
         }
-
         if (weightUsed === 0) {
              calorieResultsContainer.innerHTML = `<p>Fill out and save your information to calculate your goals.</p>`;
              return;
         }
-
         calorieResultsContainer.innerHTML = `
             <p style="font-size: 0.9em; color: var(--secondary-color);">Calculating based on current weight: <strong>${weightUsed.toFixed(1)} lbs</strong></p>
             <p>Maintenance Calories: <strong>${maintenance.toFixed(0)}</strong> kcal/day</p>
@@ -126,27 +172,18 @@ function createProfileModule() {
             <p>Carbs: <strong>${goals.carbs.toFixed(0)}g</strong></p>`;
     }
 
-    /**
-     * Puts the 'About Me' form into an editable state.
-     */
     function enterAboutMeEditMode() {
         aboutMeForm.querySelectorAll('input, select').forEach(el => el.disabled = false);
         saveAboutMeBtn.style.display = 'inline-block';
         editAboutMeBtn.style.display = 'none';
     }
 
-    /**
-     * Puts the 'About Me' form into a read-only state.
-     */
     function exitAboutMeEditMode() {
         aboutMeForm.querySelectorAll('input, select').forEach(el => el.disabled = true);
         saveAboutMeBtn.style.display = 'none';
         editAboutMeBtn.style.display = 'inline-block';
     }
 
-    /**
-     * Loads user profile data into the 'About Me' form.
-     */
     function loadAboutMeData() {
         const aboutData = getState().about;
         if (aboutData && aboutData.age) {
@@ -163,15 +200,11 @@ function createProfileModule() {
         }
     }
 
-
-    // --- 3. EVENT BINDING ---
-
-    /**
-     * Binds all event listeners for this module.
-     */
+    // --- 4. EVENT BINDING ---
     function bindEvents() {
-        resetWeightHistoryBtn.addEventListener('click', () => {
-            if (confirm("Are you sure? This will make the app ignore all past bodyweight entries for goal calculations. Your current 'About Me' weight will become the new baseline.")) {
+        resetWeightHistoryBtn.addEventListener('click', async () => {
+            const confirmed = await showConfirmation("Are you sure? This will make the app ignore all past bodyweight entries for goal calculations.", "Reset Weight History");
+            if (confirmed) {
                 const resetDate = new Date().toISOString();
                 getState().about.bodyweightResetDate = resetDate;
                 db.ref(`users/${getState().currentUserId}/preferences/bodyweightResetDate`).set(resetDate)
@@ -201,10 +234,9 @@ function createProfileModule() {
                 });
             });
         });
-
+        
         editAboutMeBtn.addEventListener('click', enterAboutMeEditMode);
-
-        // Real-time calculation as user types in edit mode
+        
         aboutMeForm.addEventListener('input', () => {
             if (saveAboutMeBtn.style.display === 'inline-block') {
                 getState().about = {
@@ -217,20 +249,15 @@ function createProfileModule() {
         });
     }
 
-
-    // --- 4. INITIALIZATION ---
-    
-    /**
-     * Initializes the module by receiving the API object.
-     * @param {object} api - The module API from app.js.
-     */
+    // --- 5. INITIALIZATION ---
     function init(api) {
         db = api.db;
         getState = api.getState;
         saveDataToFirebase = api.saveDataToFirebase;
         calculateCurrentGoals = api.calculateCurrentGoals;
         formatDate = api.formatDate;
-        calculateE1RM = api.calculateE1RM; // Grab the new function from the API
+        calculateE1RM = api.calculateE1RM;
+        showConfirmation = api.showConfirmation; 
         bindEvents();
     }
 
