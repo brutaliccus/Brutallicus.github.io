@@ -38,6 +38,43 @@ body.theme-forest {
     --border-color: #e9c46a;
     --header-background: #264653;
 }
+body.theme-matrix {
+    --primary-color: #00ff41; /* Bright Matrix Green */
+    --secondary-color: #008f11;
+    --danger-color: #ff453a;
+    --success-color: #00ff41;
+    --warning-color: #ffcc00;
+    --background-color: #000000;
+    --card-background: #0d0d0d;
+    --text-color: #00ff41;
+    --text-color-light: #00ff41; /* Black text for on-green buttons */
+    --border-color: #00570a;
+    --header-background: #0a0a0a;
+    font-family: 'Courier New', Courier, monospace;
+}
+body.theme-high-contrast {
+    --primary-color: #ffffff;    /* White */
+    --secondary-color: #bbbbbb;  /* Light Grey */
+    --danger-color: #ff453a;     /* Bright Red */
+    --success-color: #30d158;   /* Bright Green */
+    --warning-color: #ffcc00;   /* Bright Yellow */
+    --background-color: #000000; /* Pure Black */
+    --card-background: #000000;  /* Pure Black */
+    --text-color: #ffffff;       /* Pure White */
+    --text-color-light: #ffffff; /* Pure Black for button text */
+    --border-color: #ffffff;     /* Pure White */
+    --header-background: #000000; /* Pure Black */
+}
+/* In high contrast, some colored buttons need inverted text */
+body.theme-high-contrast .btn-secondary,
+body.theme-high-contrast .btn-primary {
+    color: var(--text-color-light);
+    border: 2px solid black;
+}
+body.theme-high-contrast .nav-arrow:disabled {
+    opacity: 0.4;
+}
+
 /* --- AUTHENTICATION STYLES --- */
 #auth-container {
     display: flex;
@@ -1021,51 +1058,82 @@ transform: translateZ(0);
     position: absolute; /* This allows JS to position it freely */
 }
 
-/* --- REFINED PERSONAL RECORDS (PR) STYLES --- */
-
-/* This now controls the grid of exercise cards.
-   Adjust minmax to control card size. 220px is ~30% smaller than a 300px default. */
-.pr-layout {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1.5rem;
+/* The main container for a whole category (e.g., "Chest") */
+.pr-category-group {
+    background-color: var(--card-background);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+body.theme-dark .pr-category-group {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
-/* Make the exercise name font a few sizes larger */
-.pr-layout .card h4 {
-    font-size: 1.5em; /* Increased from default h4 size */
-    margin-bottom: 1.25rem;
+/* The category title (e.g., H2 for "Chest") */
+.pr-category-group h2 {
+    font-size: 1.8em;
+    margin: 0 0 1.5rem 0;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
     text-align: center;
 }
 
-/* Stack the metric boxes vertically instead of side-by-side */
+/* The grid for exercise cards INSIDE a category group */
+.pr-category-group .pr-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+/* The individual exercise PR card */
+.pr-category-group .pr-layout .card {
+    margin-bottom: 0;
+    background-color: var(--background-color);
+    transition: transform 0.2s ease-in-out;
+}
+.pr-category-group .pr-layout .card:hover {
+    transform: translateY(-5px);
+}
+
+/* Styles for the content inside the PR card */
+.pr-layout .card h4 {
+    font-size: 1.5em;
+    margin-bottom: 1.25rem;
+    text-align: center;
+}
 .pr-card-metrics {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem; /* Reduced gap for tighter vertical stacking */
+    gap: 0.75rem;
 }
-
-/* General styling for each metric box */
 .pr-metric {
-    background-color: var(--background-color);
+    background-color: color-mix(in srgb, var(--background-color) 50%, var(--card-background) 50%);
     padding: 0.75rem;
     border-radius: 6px;
     border: 1px solid var(--border-color);
 }
-
 .pr-metric-value {
     display: block;
     font-size: 1.8em;
     font-weight: bold;
 }
-
 .pr-metric-label {
     font-size: 0.8em;
     color: var(--secondary-color);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
-
+.pr-metric.metric-e1rm .pr-metric-value {
+    color: var(--success-color);
+}
+body.theme-dark .pr-metric.metric-heavy-lift .pr-metric-value {
+    color: var(--text-color-light);
+}
+body:not(.theme-dark) .pr-metric.metric-heavy-lift .pr-metric-value {
+    color: var(--header-background);
+}
 
 /* --- NEW: COLORING FOR PR METRICS --- */
 
