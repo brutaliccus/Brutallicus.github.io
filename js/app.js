@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         appId: "1:631799148653:web:bbf030eba362eb7312cf64"
     };
     const USDA_API_KEY = 'aemBTeknGhNmAlKKGpJUiewRCOMdaAVYlAtK91an';
+    const VAPID_PUBLIC_KEY = 'BLjtXF2wcXIBo9UMnje62L7dTPtQLyHWg2DzjtqX3PbSRm4NitlNQtn-AeJaeuBzSojh--zcHj6YGJkST4-3m5M';
     const app = firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
@@ -24,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
         about: {},
         workoutTemplates: []
     };
-    let workoutModule, exerciseModule, foodModule, foodApiModule, profileModule, progressModule, userAdminModule, programsModule;
+    let workoutModule, exerciseModule, foodModule, foodApiModule, profileModule, progressModule, userAdminModule, programsModule, remindersModule, sharingModule, searchModule, recipesModule;
     const getState = () => state;
 
     // --- 3. DOM ELEMENT REFERENCES ---
@@ -78,6 +79,65 @@ document.addEventListener('DOMContentLoaded', () => {
             cancelBtn.onclick = () => close(false);
         });
     }
+    
+    // --- 4.5 PWA & OFFLINE WRAPPER FUNCTIONS (NEW SECTION) ---
+    async function saveData(firebasePath, data) {
+        if (!firebasePath) {
+            console.error(`saveData function called without a firebasePath.`);
+            return;
+        }
+        try {
+            await db.ref(firebasePath).set(data);
+        } catch (error) {
+            console.warn('Firebase write failed, saving for offline sync.', { path: firebasePath, error });
+            const offlineData = { id: new Date().toISOString(), path: firebasePath, payload: data };
+            await saveDataToIndexedDB(offlineData);
+            if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                const registration = await navigator.serviceWorker.ready;
+                await registration.sync.register('sync-offline-data');
+            }
+        }
+    }
+    async function saveDataToIndexedDB(dataToSave) {
+        try {
+            await idbKeyval.set(dataToSave.id, dataToSave);
+        } catch (error) {
+            console.error('Failed to save data to IndexedDB:', error);
+        }
+    }
+    async function subscribeUserToPush() {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.warn('Push messaging is not supported.');
+            return;
+        }
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            let subscription = await registration.pushManager.getSubscription();
+            if (subscription === null) {
+                if (!VAPID_PUBLIC_KEY || VAPID_PUBLIC_KEY === 'YOUR_VAPID_PUBLIC_KEY_HERE') {
+                    console.error("VAPID_PUBLIC_KEY is not set. Cannot subscribe to push notifications.");
+                    return;
+                }
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                });
+            }
+            console.log('User is subscribed to push notifications:', subscription);
+        } catch (error) {
+            console.error('Failed to subscribe the user to push notifications: ', error);
+        }
+    }
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    }
 
     // --- 5. CORE APP UI & LOGIC ---
     const showApp = () => { authContainer.style.display = 'none'; appContainer.style.display = 'block'; };
@@ -87,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.add(themeName);
         localStorage.setItem('freilifts_theme', themeName);
         if (state.currentUserId) {
-            db.ref(`users/${state.currentUserId}/preferences/theme`).set(themeName);
+            saveData(`users/${state.currentUserId}/preferences/theme`, themeName);
         }
     };
     const loadTheme = () => {
@@ -108,7 +168,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tabId === 'tab-about-me' && profileModule) profileModule.renderAboutMe();
         if (tabId === 'tab-users' && userAdminModule) userAdminModule.render();
     };
-
     // --- 6. DATA & FIREBASE INTERACTION ---
     const saveDataToFirebase = () => {
         if (!state.currentUserId) return;
@@ -119,9 +178,8 @@ document.addEventListener('DOMContentLoaded', () => {
             uniqueFoods: state.uniqueFoods,
             workoutTemplates: state.workoutTemplates
         };
-        db.ref(`users/${state.currentUserId}/data`).set(userData);
+        saveData(`users/${state.currentUserId}/data`, userData);
     };
-    
     function calculateCurrentGoals() {
         const { about, workouts } = getState();
         if (!about || !about.age || !about.height) {
@@ -170,23 +228,22 @@ document.addEventListener('DOMContentLoaded', () => {
         state.userGoals = goals;
         return { goals, weightUsed: weightToUse, maintenance: tdee };
     }
-
     const loadUserAndInitializeApp = (userId, userName) => {
         state.currentUserId = userId;
         localStorage.setItem('freilifts_loggedInUser', JSON.stringify({ id: userId, name: userName }));
         userNameDisplay.textContent = `Welcome, ${userName}`;
         showApp();
-        
         const userStatusDatabaseRef = db.ref(`/status/${userId}`);
         const isOfflineForDatabase = { state: 'offline', last_changed: firebase.database.ServerValue.TIMESTAMP };
         const isOnlineForDatabase = { state: 'online', last_changed: firebase.database.ServerValue.TIMESTAMP };
         db.ref('.info/connected').on('value', (snapshot) => {
-            if (!snapshot.val()) return;
+            if (!snapshot.val()) {
+                return;
+            };
             userStatusDatabaseRef.onDisconnect().set(isOfflineForDatabase).then(() => {
                 userStatusDatabaseRef.set(isOnlineForDatabase);
             });
         });
-
         db.ref('users/' + userId).once('value', (snapshot) => {
             if (!snapshot.exists()) {
                 alert("Error: Could not load your data. Logging out.");
@@ -197,41 +254,32 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = userData.data || {};
             const prefs = userData.preferences || {};
             
-            // --- DATA MIGRATION FOR WORKOUT & EXERCISE IDs & MUSCLE GROUPS ---
+            // --- DATA MIGRATION ---
             let workouts = data.workouts || [];
             let exercises = data.exercises || [];
             let needsSave = false;
-
-            // 1. Ensure all workouts have a unique ID
             workouts.forEach(w => {
                 if (!w.id) {
                     w.id = Date.now() + Math.random();
                     needsSave = true;
                 }
             });
-
-            // 2. Ensure all exercises have an ID and update them with muscle group data
             const predefinedMap = new Map(PREDEFINED_EXERCISES.map(p_ex => [p_ex.name.toLowerCase(), p_ex]));
-            
             exercises.forEach(user_ex => {
-                // Assign ID if missing
                 if (!user_ex.id) {
                     user_ex.id = Date.now() + Math.random();
                     needsSave = true;
                 }
-                // Update with muscle groups if not already updated
                 if (!user_ex.primaryMuscle) {
                     const predefinedData = predefinedMap.get(user_ex.name.toLowerCase());
                     if (predefinedData) {
                         user_ex.primaryMuscle = predefinedData.primaryMuscle;
                         user_ex.secondaryMuscles = predefinedData.secondaryMuscles;
-                        delete user_ex.category; // Clean up old property
+                        delete user_ex.category;
                         needsSave = true;
                     }
                 }
             });
-
-            // 3. Add any brand-new predefined exercises the user is missing
             const userExerciseNames = new Set(exercises.map(ex => ex.name.toLowerCase()));
             PREDEFINED_EXERCISES.forEach(p_ex => {
                 if (!userExerciseNames.has(p_ex.name.toLowerCase())) {
@@ -239,10 +287,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     needsSave = true;
                 }
             });
-
             if (needsSave) {
-                console.log("Updating data model: assigning IDs and muscle groups...");
-                // Use update to avoid overwriting other data properties if they exist
+                console.log("Updating data model...");
                 db.ref(`users/${userId}/data`).update({ workouts, exercises });
             }
             // --- END MIGRATION ---
@@ -252,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
             state.workoutTemplates = data.workoutTemplates || [];
             state.foodLogs = data.foodLogs || {};
             state.uniqueFoods = data.uniqueFoods || [];
-            state.about = prefs.about || {};
+            state.about = { ...(prefs.about || {}), name: userData.name };
             state.about.bodyweightResetDate = prefs.bodyweightResetDate || null;
             state.userGoals = prefs.goals || {};
             
@@ -262,9 +308,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const userTheme = prefs.theme || 'theme-dark';
             themeSwitcher.value = userTheme;
             applyTheme(userTheme);
-
-            // Initialize all modules
+            
+            // --- Initialize all modules ---
+            
             foodApiModule = createFoodApiModule({ USDA_API_KEY });
+            searchModule = createSearchModule();
             workoutModule = createWorkoutModule();
             exerciseModule = createExerciseModule();
             foodModule = createFoodModule();
@@ -272,16 +320,33 @@ document.addEventListener('DOMContentLoaded', () => {
             progressModule = createProgressModule();
             userAdminModule = createUserAdminModule();
             programsModule = createProgramsModule();
+            remindersModule = createRemindersModule();
+            sharingModule = createSharingModule();
+            recipesModule = createRecipesModule();
+
+            const moduleApi = { 
+                db, getState, saveDataToFirebase, switchTab, getTodayDateString, 
+                foodApi: foodApiModule, 
+                sanitizeNameForId, calculateCurrentGoals, formatDate, calculateE1RM, 
+                showConfirmation, VAPID_PUBLIC_KEY,
+            };
             
-            const moduleApi = { db, getState, saveDataToFirebase, switchTab, getTodayDateString, foodApi: foodApiModule, sanitizeNameForId, calculateCurrentGoals, formatDate, calculateE1RM, showConfirmation };
-            
+            moduleApi.workoutModule = workoutModule;
+            moduleApi.foodModule = foodModule;
+            moduleApi.recipesModule = recipesModule;
+            moduleApi.sharingModule = sharingModule;
+
+            searchModule.init(moduleApi);
+            foodModule.init(moduleApi);
+            recipesModule.init(moduleApi);
             workoutModule.init(moduleApi);
             exerciseModule.init(moduleApi);
-            foodModule.init(moduleApi);
             profileModule.init(moduleApi);
             progressModule.init(moduleApi);
             userAdminModule.init(moduleApi);
             programsModule.init(moduleApi);
+            remindersModule.init(moduleApi);
+            sharingModule.init(moduleApi);
             
             const hasAboutMeData = !!(state.about && state.about.age);
             const initialTab = hasAboutMeData ? 'tab-workout-log' : 'tab-about-me';
@@ -328,7 +393,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     authError.textContent = 'This name is already taken.';
                 } else {
                     const initialExercises = PREDEFINED_EXERCISES.map(ex => ({...ex, id: Date.now() + Math.random()}));
-                    userRef.set({ name, pin, data: { exercises: initialExercises } })
+                    const newUser = { name, pin, data: { exercises: initialExercises } };
+                    saveData(`users/${userId}`, newUser)
                         .then(() => {
                             loadUserAndInitializeApp(userId, name);
                         });
@@ -358,7 +424,8 @@ document.addEventListener('DOMContentLoaded', () => {
         tabNav.addEventListener('click', (e) => { if (e.target.matches('.tab-button')) { switchTab(e.target.dataset.tab); } });
         logoutBtn.addEventListener('click', () => {
             if (state.currentUserId) {
-                db.ref('/status/' + state.currentUserId).set({ state: 'offline', last_changed: firebase.database.ServerValue.TIMESTAMP });
+                const userStatusDatabaseRef = db.ref(`/status/${state.currentUserId}`);
+                userStatusDatabaseRef.set({ state: 'offline', last_changed: firebase.database.ServerValue.TIMESTAMP });
             }
             state.currentUserId = null;
             localStorage.removeItem('freilifts_loggedInUser');
@@ -382,17 +449,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
 });
 
-// --- SERVICE WORKER REGISTRATION ---
+// --- SERVICE WORKER REGISTRATION (CLEANED UP) ---
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/service-worker.js')
-            .then(r => console.log('Service Worker registered.'))
-            .catch(e => console.error('SW registration failed:', e));
-    });
-    let refreshing;
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-        if (refreshing) return;
-        window.location.reload();
-        refreshing = true;
+            .catch(err => console.error('Service Worker registration failed:', err));
     });
 }

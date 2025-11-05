@@ -1,7 +1,8 @@
-// js/modules/workout.js (V12 - Direct Calendar Selection - UNTRUNCATED)
+// js/modules/workout.js (FINAL REFACTORED VERSION with Event Delegation)
+
 function createWorkoutModule() {
     // --- 1. MODULE SCOPE & REFERENCES ---
-    let db, getState, saveDataToFirebase, getTodayDateString, formatDate, showConfirmation;
+    let db, getState, saveDataToFirebase, getTodayDateString, formatDate, showConfirmation, sharingModule;
     let currentWorkoutId = null,
         selectedDate = null,
         calendarViewDate = new Date();
@@ -10,26 +11,16 @@ function createWorkoutModule() {
         activeRestTimer = { setId: null, startTime: 0 },
         activeExerciseInput = null;
 
-    // DOM Elements
+    // DOM Elements - We only need references to the main containers
+    const workoutLogTab = document.getElementById('tab-workout-log');
     const workoutBodyweightInput = document.getElementById('workout-bodyweight');
     const workoutCategorySelect = document.getElementById('workout-category');
-    const startWorkoutBtn = document.getElementById('start-workout-btn');
-    const currentWorkoutSection = document.getElementById('current-workout-section');
-    const workoutTitle = document.getElementById('workout-title');
-    const prevWorkoutBtn = document.getElementById('prev-workout-btn');
-    const nextWorkoutBtn = document.getElementById('next-workout-btn');
-    const editWorkoutBtn = document.getElementById('edit-workout-btn');
-    const deleteWorkoutBtn = document.getElementById('delete-workout-btn');
-    const workoutLogEntries = document.getElementById('workout-log-entries');
-    const exerciseSearchResults = document.getElementById('workout-exercise-search-results');
-    const finishWorkoutBtn = document.getElementById('finish-workout-btn');
-    const summaryCategorySelect = document.getElementById('summary-category-select');
     const workoutSummaryContent = document.getElementById('workout-summary-content');
     const calendarMonthYear = document.getElementById('calendar-month-year');
     const calendarDaysGrid = document.getElementById('calendar-days-grid');
-    const calendarPrevWeekBtn = document.getElementById('calendar-prev-week');
-    const calendarNextWeekBtn = document.getElementById('calendar-next-week');
     const workoutTimerDisplay = document.getElementById('workout-timer-display');
+    const exerciseSearchResults = document.getElementById('workout-exercise-search-results');
+    const workoutLogEntries = document.getElementById('workout-log-entries');
     const CATEGORIES = ['Push', 'Pull', 'Legs', 'Upper Body', 'Lower Body', 'Full Body', 'Other'];
 
     // --- 2. HELPER & UTILITY ---
@@ -44,7 +35,9 @@ function createWorkoutModule() {
         if (workoutTimerInterval) clearInterval(workoutTimerInterval);
         workoutTimerDisplay.style.display = 'inline-flex';
         workoutTimerInterval = setInterval(() => {
-            workoutTimerDisplay.querySelector('span').textContent = formatDuration(Date.now() - startTime);
+            if(workoutTimerDisplay.querySelector('span')) {
+                workoutTimerDisplay.querySelector('span').textContent = formatDuration(Date.now() - startTime);
+            }
         }, 1000);
     };
     const formatRestTime = (ms) => {
@@ -73,7 +66,6 @@ function createWorkoutModule() {
     // --- 3. DATA MIGRATION ---
     function migrateExerciseData(exercises) {
         if (!exercises || exercises.length === 0) return [];
-        // Check if the data is already in the new format
         if (exercises[0] && Array.isArray(exercises[0].sets)) return exercises;
         const exerciseMap = new Map();
         exercises.forEach(oldEntry => {
@@ -99,82 +91,97 @@ function createWorkoutModule() {
         </div>`;
 
     function renderLogEntries() {
-    const workout = getState().workouts.find(w => w.id === currentWorkoutId);
-    if (!workout) {
-        workoutLogEntries.innerHTML = '';
-        return;
-    }
-    workout.exercises = migrateExerciseData(workout.exercises);
-    workoutLogEntries.innerHTML = '';
-    const isWorkoutFinished = workout.isFinished || false;
-
-    workout.exercises.forEach(exercise => {
-        const exerciseCard = document.createElement('div');
-        exerciseCard.className = 'exercise-card';
-        exerciseCard.dataset.exerciseId = exercise.id;
-        const isNameSetAndNotEditing = exercise.name && !exercise.isEditing;
-
-        // Render the header (unchanged)
-        let headerHTML = `<div class="exercise-header">${isNameSetAndNotEditing
-            ? `<h4>${exercise.name}</h4><div class="actions">${!isWorkoutFinished ? `<button class="icon-btn edit-exercise" title="Edit Exercise">&#9998;</button><button class="icon-btn delete-exercise" title="Delete Exercise">&#128465;</button>`:''}</div>`
-            : `<input type="text" class="inline-log-input exercise-name-input" placeholder="Enter Exercise Name..." value="${exercise.name || ''}" autocomplete="off">`}</div>`;
-        
-        let bodyHTML = '<div class="set-list">';
-        if (exercise.name) {
-            // =========================================================================
-            //  NEW LOGIC: If the exercise is "done", show the summary. Otherwise, show the inputs.
-            // =========================================================================
-            if (isNameSetAndNotEditing || isWorkoutFinished) {
-                // RENDER THE SUMMARY VIEW
-                const summaryString = createSetsSummaryString(exercise.sets);
-                bodyHTML += `<div class="sets-summary-display">${summaryString}</div>`;
-            } else {
-                // RENDER THE EDITING VIEW
-                if (exercise.sets.length > 0) {
-                    bodyHTML += `<div class="set-row-header"><span>WEIGHT (LBS)</span><span>REPS</span></div>`;
-                }
-                exercise.sets.forEach((set, index) => {
-                    let setRowHTML = `<div class="set-row" data-set-id="${set.id}"><span class="set-number">${index + 1}</span>${createStepperInput('weight', set.weight, 5)}${createStepperInput('reps', set.reps, 1)}<button class="icon-btn complete-set-btn" title="Complete Set">&#10004;</button><button class="icon-btn delete-set" title="Delete Set">&#10006;</button></div>`;
-                    if (activeRestTimer.setId === set.id) {
-                        setRowHTML += `<div class="rest-timer-inline"><span class="rest-timer-inline-time">00:00</span><div class="rest-timer-inline-actions"><button class="btn-secondary dismiss-rest-timer">Dismiss</button></div></div>`;
-                    }
-                    bodyHTML += setRowHTML;
-                });
-                bodyHTML += `<div class="add-set-btn-container"><button class="add-set-btn" title="Add Set">+</button></div>`;
-            }
+        const workout = getState().workouts.find(w => w.id === currentWorkoutId);
+        if (!workout) {
+            workoutLogEntries.innerHTML = '';
+            return;
         }
-        bodyHTML += '</div>'; // close .set-list
-        
-        let footerHTML = (exercise.name && exercise.isEditing) ? `<div class="exercise-done-btn-container"><button class="btn-primary exercise-done-btn">Done</button></div>` : '';
-        exerciseCard.innerHTML = headerHTML + bodyHTML + footerHTML;
-        workoutLogEntries.appendChild(exerciseCard);
-    });
-
-    if (!isWorkoutFinished && currentWorkoutId) {
-        const addExerciseRow = document.createElement('div');
-        addExerciseRow.className = 'add-exercise-row';
-        addExerciseRow.innerHTML = `<button class="add-exercise-btn" title="Add New Exercise">+</button>`;
-        workoutLogEntries.appendChild(addExerciseRow);
+        workout.exercises = migrateExerciseData(workout.exercises);
+        workoutLogEntries.innerHTML = '';
+        const isWorkoutFinished = workout.isFinished || false;
+        workout.exercises.forEach(exercise => {
+            const exerciseCard = document.createElement('div');
+            exerciseCard.className = 'exercise-card';
+            exerciseCard.dataset.exerciseId = exercise.id;
+            const isNameSetAndNotEditing = exercise.name && !exercise.isEditing;
+            let headerHTML = `<div class="exercise-header">${isNameSetAndNotEditing
+                ? `<h4>${exercise.name}</h4><div class="actions">${!isWorkoutFinished ?` <button class="icon-btn edit-exercise" title="Edit Exercise">&#9998;</button><button class="icon-btn delete-exercise" title="Delete Exercise">&#128465;</button>`:''}</div>`
+                : `<input type="text" class="inline-log-input exercise-name-input" placeholder="Enter Exercise Name..." value="${exercise.name || ''}" autocomplete="off">`}</div>`;
+            let bodyHTML = '<div class="set-list">';
+            if (exercise.name) {
+                if (isNameSetAndNotEditing || isWorkoutFinished) {
+                    const summaryString = createSetsSummaryString(exercise.sets);
+                    bodyHTML += `<div class="sets-summary-display">${summaryString}</div>`;
+                } else {
+                    if (exercise.sets.length > 0) {
+                        bodyHTML += `<div class="set-row-header"><span>WEIGHT (LBS)</span><span>REPS</span></div>`;
+                    }
+                    exercise.sets.forEach((set, index) => {
+                        let setRowHTML = `<div class="set-row" data-set-id="${set.id}"><span class="set-number">${index + 1}</span>${createStepperInput('weight', set.weight, 5)}${createStepperInput('reps', set.reps, 1)}<button class="icon-btn complete-set-btn" title="Complete Set">&#10004;</button><button class="icon-btn delete-set" title="Delete Set">&#10006;</button></div>`;
+                        if (activeRestTimer.setId === set.id) {
+                            setRowHTML += `<div class="rest-timer-inline"><span class="rest-timer-inline-time">00:00</span><div class="rest-timer-inline-actions"><button class="btn-secondary dismiss-rest-timer">Dismiss</button></div></div>`;
+                        }
+                        bodyHTML += setRowHTML;
+                    });
+                    bodyHTML += `<div class="add-set-btn-container"><button class="add-set-btn" title="Add Set">+</button></div>`;
+                }
+            }
+            bodyHTML += '</div>';
+            let footerHTML = (exercise.name && exercise.isEditing) ? `<div class="exercise-done-btn-container"><button class="btn-primary exercise-done-btn">Done</button></div>` : '';
+            exerciseCard.innerHTML = headerHTML + bodyHTML + footerHTML;
+            workoutLogEntries.appendChild(exerciseCard);
+        });
+        if (!isWorkoutFinished && currentWorkoutId) {
+            const addExerciseRow = document.createElement('div');
+            addExerciseRow.className = 'add-exercise-row';
+            addExerciseRow.innerHTML = `<button class="add-exercise-btn" title="Add New Exercise">+</button>`;
+            workoutLogEntries.appendChild(addExerciseRow);
+        }
     }
-}
-    
+
     function renderCurrentWorkoutView() {
         const workout = getState().workouts.find(w => w.id === currentWorkoutId);
         if (!workout) return;
-        const sortedWorkouts = getState().workouts.sort((a, b) => {
-            if (a.date > b.date) return -1;
-            if (a.date < b.date) return 1;
-            return (b.startTime || 0) - (a.startTime || 0);
-        });
+        const sortedWorkouts = getState().workouts.sort((a, b) => new Date(b.date) - new Date(a.date) || (b.startTime || 0) - (a.startTime || 0));
         const currentIndex = sortedWorkouts.findIndex(w => w.id === currentWorkoutId);
-        prevWorkoutBtn.disabled = currentIndex >= sortedWorkouts.length - 1;
-        nextWorkoutBtn.disabled = currentIndex <= 0;
         const isFinished = workout.isFinished || false;
-        workoutTitle.textContent = `${formatDate(workout.date)} - ${workout.category}`;
-        document.getElementById('bodyweight-value').textContent = workout.bodyweight;
-        document.getElementById('bodyweight-display-container').style.display = workout.bodyweight ? 'block' : 'none';
-        finishWorkoutBtn.style.display = isFinished ? 'none' : 'block';
-        editWorkoutBtn.style.display = isFinished ? 'inline-block' : 'none';
+
+        const prevBtn = workoutLogTab.querySelector('#prev-workout-btn');
+        const nextBtn = workoutLogTab.querySelector('#next-workout-btn');
+        if (prevBtn) prevBtn.disabled = currentIndex >= sortedWorkouts.length - 1;
+        if (nextBtn) nextBtn.disabled = currentIndex <= 0;
+
+        workoutLogTab.querySelector('#workout-title').textContent = `${formatDate(workout.date)} - ${workout.category}`;
+        workoutLogTab.querySelector('#bodyweight-value').textContent = workout.bodyweight;
+        workoutLogTab.querySelector('#bodyweight-display-container').style.display = workout.bodyweight ? 'block' : 'none';
+        workoutLogTab.querySelector('#finish-workout-btn').style.display = isFinished ? 'none' : 'block';
+        
+        const workoutHeaderActions = workoutLogTab.querySelector('.workout-header-actions');
+        workoutHeaderActions.innerHTML = '';
+
+        if (isFinished) {
+            const editBtn = document.createElement('button');
+            editBtn.id = 'edit-workout-btn';
+            editBtn.className = 'icon-btn edit';
+            editBtn.title = 'Edit Workout';
+            editBtn.innerHTML = '&#9998;';
+            workoutHeaderActions.appendChild(editBtn);
+            
+            const shareBtn = document.createElement('button');
+            shareBtn.id = 'share-workout-btn';
+            shareBtn.className = 'icon-btn share';
+            shareBtn.title = 'Share this workout';
+            shareBtn.innerHTML = '&#128279;';
+            workoutHeaderActions.appendChild(shareBtn);
+        }
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.id = 'delete-workout-btn';
+        deleteBtn.className = 'icon-btn delete';
+        deleteBtn.title = 'Delete this workout';
+        deleteBtn.innerHTML = '&#128465;';
+        workoutHeaderActions.appendChild(deleteBtn);
+        
         if (workoutTimerInterval) clearInterval(workoutTimerInterval);
         if (workout.duration) {
             workoutTimerDisplay.querySelector('span').textContent = formatDuration(workout.duration);
@@ -186,8 +193,7 @@ function createWorkoutModule() {
         }
         renderLogEntries();
     }
-    
-    function renderSummary(category) {
+	    function renderSummary(category) {
         const lastWorkout = getState().workouts.filter(w => w.category === category).sort((a, b) => new Date(b.date) - new Date(a.date))[0];
         if (!lastWorkout) {
             workoutSummaryContent.innerHTML = '<p>No previous workout found.</p>';
@@ -207,7 +213,7 @@ function createWorkoutModule() {
         }
         workoutSummaryContent.innerHTML = summaryHTML;
     }
-    
+
     function renderWorkoutCalendar() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -249,84 +255,160 @@ function createWorkoutModule() {
             calendarDaysGrid.appendChild(dayEl);
         }
     }
-    
+
     function render() {
         if (!selectedDate) selectedDate = getTodayDateString();
         renderWorkoutCalendar();
         
-        // If the current workout ID is no longer valid for the selected date, clear it.
         const currentWorkout = getState().workouts.find(w => w.id === currentWorkoutId);
         if (currentWorkout && currentWorkout.date !== selectedDate) {
             currentWorkoutId = null;
         }
 
-        // If no workout is selected for the current day, try to select the first one.
         if (!currentWorkoutId) {
             const firstWorkoutOnDay = getState().workouts.find(w => w.date === selectedDate);
             if (firstWorkoutOnDay) {
                 currentWorkoutId = firstWorkoutOnDay.id;
             }
         }
-        
+
         if (currentWorkoutId) {
+            workoutLogTab.querySelector('#current-workout-section').style.display = 'block';
             renderCurrentWorkoutView();
-            currentWorkoutSection.style.display = 'block';
         } else {
             if (workoutTimerInterval) clearInterval(workoutTimerInterval);
-            currentWorkoutSection.style.display = 'none';
+            workoutLogTab.querySelector('#current-workout-section').style.display = 'none';
         }
-        document.getElementById('create-workout-section').style.display = 'block';
+        workoutLogTab.querySelector('#create-workout-section').style.display = 'block';
     }
-    // --- 5. EVENT BINDING ---
-    function bindEvents() {
-        // Main listener for calendar day clicks
-        calendarDaysGrid.addEventListener('click', (e) => {
-            const bar = e.target.closest('.calendar-workout-bar');
-            const dayEl = e.target.closest('.calendar-day');
 
-            if (bar) { // If a specific workout bar was clicked
-                e.stopPropagation(); // Prevent the day-click logic from firing
+    // --- 5. EVENT BINDING (REFACTORED) ---
+    function bindEvents() {
+        // ⭐ FIX: Use one single, smart listener on the main tab container
+        workoutLogTab.addEventListener('click', async (e) => {
+            const target = e.target;
+            
+            // Calendar navigation
+            if (target.id === 'calendar-prev-week') {
+                calendarViewDate.setDate(calendarViewDate.getDate() - 7);
+                render();
+                return;
+            }
+            if (target.id === 'calendar-next-week') {
+                calendarViewDate.setDate(calendarViewDate.getDate() + 7);
+                render();
+                return;
+            }
+
+            // Calendar day/workout selection
+            const bar = target.closest('.calendar-workout-bar');
+            const dayEl = target.closest('.calendar-day');
+            if (bar) {
+                e.stopPropagation();
                 currentWorkoutId = Number(bar.dataset.workoutId);
                 selectedDate = dayEl.dataset.date;
                 render();
-            } else if (dayEl) { // If an empty part of the day was clicked
+                return;
+            }
+            if (dayEl) {
                 selectedDate = dayEl.dataset.date;
-                // Find first workout of the day, or null if none
                 const firstWorkoutOnDay = getState().workouts.find(w => w.date === selectedDate);
                 currentWorkoutId = firstWorkoutOnDay ? firstWorkoutOnDay.id : null;
                 render();
-            }
-        });
-
-        // Main button to create the first workout of the day
-        startWorkoutBtn.addEventListener('click', () => {
-            const date = selectedDate;
-            const workoutsOnDay = getState().workouts.filter(w => w.date === date);
-            if (workoutsOnDay.length >= 3) {
-                alert('Maximum of 3 workouts per day reached.');
                 return;
             }
-            const newWorkout = {
-                id: Date.now(),
-                date,
-                bodyweight: workoutBodyweightInput.value,
-                category: workoutCategorySelect.value,
-                exercises: [],
-                isFinished: false,
-                startTime: Date.now()
-            };
-            getState().workouts.push(newWorkout);
-            currentWorkoutId = newWorkout.id; // Set the brand new workout as the current one
-            saveDataToFirebase();
-            render();
+
+            // Create workout
+            if (target.id === 'start-workout-btn') {
+                const date = selectedDate;
+                const workoutsOnDay = getState().workouts.filter(w => w.date === date);
+                if (workoutsOnDay.length >= 3) {
+                    alert('Maximum of 3 workouts per day reached.');
+                    return;
+                }
+                const newWorkout = { id: Date.now(), date, bodyweight: workoutBodyweightInput.value, category: workoutCategorySelect.value, exercises: [], isFinished: false, startTime: Date.now() };
+                getState().workouts.push(newWorkout);
+                currentWorkoutId = newWorkout.id;
+                saveDataToFirebase();
+                render();
+                return;
+            }
+
+            // Current workout navigation and actions
+            const sortedWorkouts = getState().workouts.sort((a,b)=>new Date(b.date)-new Date(a.date)||(b.startTime||0)-(a.startTime||0));
+            const currentIndex = sortedWorkouts.findIndex(w=>w.id===currentWorkoutId);
+
+            if (target.id === 'prev-workout-btn' && currentIndex < sortedWorkouts.length - 1) {
+                selectedDate = sortedWorkouts[currentIndex + 1].date;
+                currentWorkoutId = sortedWorkouts[currentIndex + 1].id;
+                render();
+                return;
+            }
+            if (target.id === 'next-workout-btn' && currentIndex > 0) {
+                selectedDate = sortedWorkouts[currentIndex - 1].date;
+                currentWorkoutId = sortedWorkouts[currentIndex - 1].id;
+                render();
+                return;
+            }
+            if (target.id === 'finish-workout-btn') {
+                const w = getState().workouts.find(w => w.id === currentWorkoutId);
+                if (w) {
+                    w.exercises.forEach(ex => ex.isEditing = false);
+                    if (workoutTimerInterval) clearInterval(workoutTimerInterval);
+                    if (w.startTime && !w.duration) w.duration = Date.now() - w.startTime;
+                    w.isFinished = true;
+                    saveDataToFirebase();
+                    render();
+                }
+                return;
+            }
+            if (target.id === 'edit-bodyweight-btn') {
+                const w = getState().workouts.find(w => w.id === currentWorkoutId);
+                if (!w) return;
+                const nBw = prompt("Enter new body weight (lbs):", w.bodyweight || '');
+                if (nBw !== null) { w.bodyweight = parseFloat(nBw) || ''; saveDataToFirebase(); render(); }
+                return;
+            }
+
+            // Dynamic header buttons (edit, share, delete)
+            if (target.id === 'edit-workout-btn') {
+                const w = getState().workouts.find(w => w.id === currentWorkoutId);
+                if (w) { w.isFinished = false; w.exercises.forEach(ex => ex.isEditing = true); saveDataToFirebase(); render(); }
+                return;
+            }
+            if (target.id === 'delete-workout-btn') {
+                if (await showConfirmation("Delete this entire workout log?")) {
+                    getState().workouts = getState().workouts.filter(w => w.id !== currentWorkoutId);
+                    currentWorkoutId = null;
+                    saveDataToFirebase();
+                    render();
+                }
+                return;
+            }
+            if (target.id === 'share-workout-btn' && sharingModule) {
+                const w = getState().workouts.find(w => w.id === currentWorkoutId);
+                if (w) sharingModule.openShareModal(w.id, w.date);
+                return;
+            }
+
+            // Summary panel category change
+            if (target.id === 'summary-category-select') {
+                renderSummary(target.value);
+            }
+            if (target.id === 'workout-category') {
+                workoutLogTab.querySelector('#summary-category-select').value = target.value;
+                renderSummary(target.value);
+            }
         });
 
-        // Event delegation for all actions within the workout log
+        // Event listeners that need to be on specific elements can stay separate
+        // The workout log entries need their own complex listener due to input/blur events
         workoutLogEntries.addEventListener('click', async (e) => {
             const workout = getState().workouts.find(w => w.id === currentWorkoutId);
             if (!workout || workout.isFinished) return;
+            const target = e.target;
 
-            if (e.target.matches('.add-exercise-btn')) {
+            if (target.matches('.add-exercise-btn')) {
                 if (restTimerInterval) clearInterval(restTimerInterval);
                 activeRestTimer = { setId: null, startTime: 0 };
                 workout.exercises.push({ id: Date.now(), name: '', sets: [], isEditing: true });
@@ -335,19 +417,19 @@ function createWorkoutModule() {
                 if(newCard) newCard.querySelector('input').focus();
             }
 
-            const exerciseCard = e.target.closest('.exercise-card');
+            const exerciseCard = target.closest('.exercise-card');
             if (!exerciseCard) return;
             const exerciseId = Number(exerciseCard.dataset.exerciseId);
             const exercise = workout.exercises.find(ex => ex.id === exerciseId);
             if (!exercise) return;
 
-            if (e.target.matches('.add-set-btn')) {
+            if (target.matches('.add-set-btn')) {
                 if (restTimerInterval) clearInterval(restTimerInterval);
                 activeRestTimer = { setId: null, startTime: 0 };
                 const lastSet = exercise.sets[exercise.sets.length - 1];
                 exercise.sets.push({ id: Date.now(), weight: lastSet ? lastSet.weight : '', reps: lastSet ? lastSet.reps : '' });
                 renderLogEntries();
-            } else if (e.target.matches('.exercise-done-btn')) {
+            } else if (target.matches('.exercise-done-btn')) {
                 if (!exercise.name.trim()) {
                     workout.exercises = workout.exercises.filter(ex => ex.id !== exerciseId);
                 } else {
@@ -355,30 +437,30 @@ function createWorkoutModule() {
                 }
                 saveDataToFirebase();
                 renderLogEntries();
-            } else if (e.target.matches('.edit-exercise')) {
+            } else if (target.matches('.edit-exercise')) {
                 exercise.isEditing = true;
                 renderLogEntries();
-            } else if (e.target.matches('.delete-exercise')) {
+            } else if (target.matches('.delete-exercise')) {
                  if (await showConfirmation(`Delete all sets for ${exercise.name}?`)) {
                     workout.exercises = workout.exercises.filter(ex => ex.id !== exerciseId);
                     saveDataToFirebase();
                     renderLogEntries();
                 }
-            } else if (e.target.matches('.delete-set')) {
-                const setRow = e.target.closest('.set-row');
+            } else if (target.matches('.delete-set')) {
+                const setRow = target.closest('.set-row');
                 const setId = Number(setRow.dataset.setId);
                 exercise.sets = exercise.sets.filter(set => set.id !== setId);
                 saveDataToFirebase();
                 renderLogEntries();
-            } else if (e.target.matches('.stepper-btn')) {
-                const setRow = e.target.closest('.set-row');
-                const input = setRow.querySelector(`input[data-field="${e.target.dataset.type}"]`);
-                const increment = Number(e.target.dataset.increment);
+            } else if (target.matches('.stepper-btn')) {
+                const setRow = target.closest('.set-row');
+                const input = setRow.querySelector(`input[data-field="${target.dataset.type}"]`);
+                const increment = Number(target.dataset.increment);
                 input.value = Math.max(0, (Number(input.value) || 0) + increment).toString();
                 input.dispatchEvent(new Event('input', { bubbles: true }));
-            } else if (e.target.matches('.complete-set-btn')) {
+            } else if (target.matches('.complete-set-btn')) {
                 if (restTimerInterval) clearInterval(restTimerInterval);
-                const setRow = e.target.closest('.set-row');
+                const setRow = target.closest('.set-row');
                 const setId = Number(setRow.dataset.setId);
                 activeRestTimer = { setId, startTime: Date.now() };
                 renderLogEntries();
@@ -393,7 +475,7 @@ function createWorkoutModule() {
                         }
                     }, 1000);
                 }
-            } else if (e.target.matches('.dismiss-rest-timer')) {
+            } else if (target.matches('.dismiss-rest-timer')) {
                 if (restTimerInterval) clearInterval(restTimerInterval);
                 activeRestTimer = { setId: null, startTime: 0 };
                 renderLogEntries();
@@ -403,15 +485,17 @@ function createWorkoutModule() {
         workoutLogEntries.addEventListener('input', (e) => {
             const workout = getState().workouts.find(w => w.id === currentWorkoutId);
             if (!workout) return;
-            const exerciseCard = e.target.closest('.exercise-card');
+            const target = e.target;
+            const exerciseCard = target.closest('.exercise-card');
             if (!exerciseCard) return;
             const exerciseId = Number(exerciseCard.dataset.exerciseId);
             const exercise = workout.exercises.find(ex => ex.id === exerciseId);
             if (!exercise) return;
-            if (e.target.matches('.exercise-name-input')) {
-                activeExerciseInput = e.target;
-                exercise.name = e.target.value;
-                const query = e.target.value.toLowerCase();
+
+            if (target.matches('.exercise-name-input')) {
+                activeExerciseInput = target;
+                exercise.name = target.value;
+                const query = target.value.toLowerCase();
                 const inputRect = activeExerciseInput.getBoundingClientRect();
                 exerciseSearchResults.style.top = `${inputRect.bottom + window.scrollY}px`;
                 exerciseSearchResults.style.left = `${inputRect.left + window.scrollX}px`;
@@ -421,11 +505,12 @@ function createWorkoutModule() {
                 exerciseSearchResults.innerHTML = filtered.map(ex => `<div class="search-result-item">${ex.name}</div>`).join('');
                 exerciseSearchResults.style.display = filtered.length > 0 ? 'block' : 'none';
             }
-            const setRow = e.target.closest('.set-row');
-            if (setRow && e.target.matches('.inline-log-input')) {
+            
+            const setRow = target.closest('.set-row');
+            if (setRow && target.matches('.inline-log-input')) {
                 const setId = Number(setRow.dataset.setId);
                 const set = exercise.sets.find(s => s.id === setId);
-                if (set) set[e.target.dataset.field] = e.target.value;
+                if (set) set[target.dataset.field] = target.value;
             }
             saveDataToFirebase();
         });
@@ -435,15 +520,6 @@ function createWorkoutModule() {
                  setTimeout(() => {
                      if (document.activeElement.closest('.search-result-item')) return;
                      exerciseSearchResults.style.display = 'none';
-                     const workout = getState().workouts.find(w => w.id === currentWorkoutId);
-                     if (!workout) return;
-                     const exerciseCard = e.target.closest('.exercise-card');
-                     const exerciseId = Number(exerciseCard.dataset.exerciseId);
-                     const exercise = workout.exercises.find(ex => ex.id === exerciseId);
-                     if (exercise && !exercise.name.trim()) {
-                         workout.exercises = workout.exercises.filter(ex => ex.id !== exerciseId);
-                         renderLogEntries();
-                     }
                  }, 200);
              }
         }, true);
@@ -464,19 +540,8 @@ function createWorkoutModule() {
                 activeExerciseInput = null;
             }
         });
-
-        calendarPrevWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() - 7); render(); });
-        calendarNextWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() + 7); render(); });
-        prevWorkoutBtn.addEventListener('click', () => { const s = getState().workouts.sort((a,b)=>new Date(b.date)-new Date(a.date)||(b.startTime||0)-(a.startTime||0)); const i = s.findIndex(w=>w.id===currentWorkoutId); if(i<s.length-1){ selectedDate = s[i+1].date; currentWorkoutId = s[i+1].id; render(); } });
-        nextWorkoutBtn.addEventListener('click', () => { const s = getState().workouts.sort((a,b)=>new Date(b.date)-new Date(a.date)||(b.startTime||0)-(a.startTime||0)); const i = s.findIndex(w=>w.id===currentWorkoutId); if(i>0){ selectedDate = s[i-1].date; currentWorkoutId = s[i-1].id; render(); } });
-        deleteWorkoutBtn.addEventListener('click', async () => { if (await showConfirmation("Delete this entire workout log?")) { getState().workouts = getState().workouts.filter(w => w.id !== currentWorkoutId); currentWorkoutId = null; saveDataToFirebase(); render(); } });
-        finishWorkoutBtn.addEventListener('click', () => { const w = getState().workouts.find(w => w.id === currentWorkoutId); if (w) { w.exercises.forEach(ex => ex.isEditing = false); if (workoutTimerInterval) clearInterval(workoutTimerInterval); if (w.startTime && !w.duration) w.duration = Date.now() - w.startTime; w.isFinished = true; saveDataToFirebase(); render(); } });
-        editWorkoutBtn.addEventListener('click', () => { const w = getState().workouts.find(w => w.id === currentWorkoutId); if (w) { w.isFinished = false; w.exercises.forEach(ex => ex.isEditing = true); saveDataToFirebase(); render(); } });
-        document.getElementById('edit-bodyweight-btn').addEventListener('click', () => { const w = getState().workouts.find(w => w.id === currentWorkoutId); if (!w) return; const nBw = prompt("Enter new body weight (lbs):", w.bodyweight || ''); if (nBw !== null) { w.bodyweight = parseFloat(nBw) || ''; saveDataToFirebase(); render(); } });
-        summaryCategorySelect.addEventListener('change', (e) => renderSummary(e.target.value));
-        workoutCategorySelect.addEventListener('change', (e) => { summaryCategorySelect.value = e.target.value; renderSummary(e.target.value); });
     }
-    
+
     // --- 6. INITIALIZATION ---
     function init(api) {
         db = api.db;
@@ -485,11 +550,17 @@ function createWorkoutModule() {
         getTodayDateString = api.getTodayDateString;
         formatDate = api.formatDate;
         showConfirmation = api.showConfirmation;
+        sharingModule = api.sharingModule;
+        
         selectedDate = getTodayDateString();
         workoutCategorySelect.innerHTML = CATEGORIES.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-        summaryCategorySelect.innerHTML = CATEGORIES.map(cat => `<option value="${cat}">${cat}</option>`).join('');
-        renderSummary(summaryCategorySelect.value);
+        const summarySelect = workoutLogTab.querySelector('#summary-category-select');
+        if(summarySelect) {
+            summarySelect.innerHTML = CATEGORIES.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+            renderSummary(summarySelect.value);
+        }
         bindEvents();
     }
+    
     return { init, render };
 }

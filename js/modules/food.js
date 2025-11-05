@@ -1,4 +1,4 @@
-// js/modules/food.js (V3 - Corrected Calendar and All Previous Fixes)
+// js/modules/food.js (Refactored with Search Module)
 function createFoodModule() {
     // --- 1. MODULE SCOPE & REFERENCES ---
     let db, getState, saveDataToFirebase, getTodayDateString, foodApi, calculateCurrentGoals, formatDate, showConfirmation;
@@ -7,55 +7,54 @@ function createFoodModule() {
         selectedCalendarDate = null,
         macroChart,
         html5QrCode,
-        lastSelectedMeal = null,
-        usdaSearchTimeout;
+        lastSelectedMeal = null;
+	const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+    // Create a dedicated search module instance for the main food log
+    const searchModule = createSearchModule();
+    
+    // --- 2. DOM ELEMENTS ---
+    const createFoodLogSection = document.getElementById('create-food-log-section'),
+          createFoodLogForm = document.getElementById('create-food-log-form'),
+          foodLogDateInput = document.getElementById('food-log-date'),
+          currentFoodLogSection = document.getElementById('current-food-log-section'),
+          foodLogTitle = document.getElementById('food-log-title'),
+          prevFoodLogBtn = document.getElementById('prev-food-log-btn'),
+          nextFoodLogBtn = document.getElementById('next-food-log-btn'),
+          editFoodLogBtn = document.getElementById('edit-food-log-btn'),
+          deleteFoodLogBtn = document.getElementById('delete-food-log-btn'),
+          addFoodItemForm = document.getElementById('add-food-item-form'),
+          foodItemNameInput = document.getElementById('food-item-name'),
+          foodSearchResultsContainer = document.getElementById('food-search-results-container'),
+          foodItemMealSelect = document.getElementById('food-item-meal'),
+          foodItemFatInput = document.getElementById('food-item-fat'),
+          foodItemCarbsInput = document.getElementById('food-item-carbs'),
+          foodItemProteinInput = document.getElementById('food-item-protein'),
+          foodLogEntries = document.getElementById('food-log-entries'),
+          foodLogTotals = document.getElementById('food-log-totals'),
+          calorieGoalProgress = document.getElementById('calorie-goal-progress'),
+          finishFoodLogBtn = document.getElementById('finish-food-log-btn'),
+          foodMacroDetails = document.getElementById('food-macro-details'),
+          foodItemQuantityInput = document.getElementById('food-item-quantity'),
+          foodItemUnitSelect = document.getElementById('food-item-unit'),
+          scannerModal = document.getElementById('scanner-modal'),
+          scanBarcodeBtn = document.getElementById('scan-barcode-btn'),
+          scannerCloseBtn = document.getElementById('scanner-close-btn'),
+          foodCalendarMonthYear = document.getElementById('food-calendar-month-year'),
+          foodCalendarDaysGrid = document.getElementById('food-calendar-days-grid'),
+          foodCalendarPrevWeekBtn = document.getElementById('food-calendar-prev-week'),
+          foodCalendarNextWeekBtn = document.getElementById('food-calendar-next-week'),
+          showCustomFoodModalBtn = document.getElementById('show-custom-food-modal-btn'),
+          customFoodModal = document.getElementById('custom-food-modal'),
+          customFoodModalCloseBtn = document.getElementById('custom-food-modal-close-btn'),
+          customFoodForm = document.getElementById('custom-food-form'),
+          customFoodName = document.getElementById('custom-food-name'),
+          customServingSize = document.getElementById('custom-serving-size'),
+          customFat = document.getElementById('custom-fat'),
+          customCarbs = document.getElementById('custom-carbs'),
+          customProtein = document.getElementById('custom-protein'),
+          customFoodError = document.getElementById('custom-food-error');
 
-    // Constants
-    const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
-
-    // DOM Elements
-    const createFoodLogSection = document.getElementById('create-food-log-section');
-    const createFoodLogForm = document.getElementById('create-food-log-form');
-    const foodLogDateInput = document.getElementById('food-log-date');
-    const currentFoodLogSection = document.getElementById('current-food-log-section');
-    const foodLogTitle = document.getElementById('food-log-title');
-    const prevFoodLogBtn = document.getElementById('prev-food-log-btn');
-    const nextFoodLogBtn = document.getElementById('next-food-log-btn');
-    const editFoodLogBtn = document.getElementById('edit-food-log-btn');
-    const deleteFoodLogBtn = document.getElementById('delete-food-log-btn');
-    const addFoodItemForm = document.getElementById('add-food-item-form');
-    const foodItemNameInput = document.getElementById('food-item-name');
-    const foodSearchResultsContainer = document.getElementById('food-search-results-container');
-    const foodItemMealSelect = document.getElementById('food-item-meal');
-    const foodItemFatInput = document.getElementById('food-item-fat');
-    const foodItemCarbsInput = document.getElementById('food-item-carbs');
-    const foodItemProteinInput = document.getElementById('food-item-protein');
-    const foodLogEntries = document.getElementById('food-log-entries');
-    const foodLogTotals = document.getElementById('food-log-totals');
-    const calorieGoalProgress = document.getElementById('calorie-goal-progress');
-    const finishFoodLogBtn = document.getElementById('finish-food-log-btn');
-    const foodMacroDetails = document.getElementById('food-macro-details');
-    const foodItemQuantityInput = document.getElementById('food-item-quantity');
-    const foodItemUnitSelect = document.getElementById('food-item-unit');
-    const scannerModal = document.getElementById('scanner-modal');
-    const scanBarcodeBtn = document.getElementById('scan-barcode-btn');
-    const scannerCloseBtn = document.getElementById('scanner-close-btn');
-    const foodCalendarMonthYear = document.getElementById('food-calendar-month-year');
-    const foodCalendarDaysGrid = document.getElementById('food-calendar-days-grid');
-    const foodCalendarPrevWeekBtn = document.getElementById('food-calendar-prev-week');
-    const foodCalendarNextWeekBtn = document.getElementById('food-calendar-next-week');
-    const showCustomFoodModalBtn = document.getElementById('show-custom-food-modal-btn');
-    const customFoodModal = document.getElementById('custom-food-modal');
-    const customFoodModalCloseBtn = document.getElementById('custom-food-modal-close-btn');
-    const customFoodForm = document.getElementById('custom-food-form');
-    const customFoodName = document.getElementById('custom-food-name');
-    const customServingSize = document.getElementById('custom-serving-size');
-    const customFat = document.getElementById('custom-fat');
-    const customCarbs = document.getElementById('custom-carbs');
-    const customProtein = document.getElementById('custom-protein');
-    const customFoodError = document.getElementById('custom-food-error');
-
-    // --- 2. HELPER FUNCTIONS ---
+    // --- 3. HELPER & RENDER FUNCTIONS ---
     const toLocalISOString = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     const getMacroColorClass = (current, goal) => {
         if (goal <= 0) return 'macro-default';
@@ -80,7 +79,6 @@ function createFoodModule() {
         customFoodError.textContent = '';
     };
 
-    // --- 3. RENDER FUNCTIONS ---
     function renderFoodCalendar() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -124,12 +122,10 @@ function createFoodModule() {
     function renderFoodEntries(items, isFinished) {
         foodLogEntries.innerHTML = !items || items.length === 0 ? '<p>No food logged for this day yet.</p>' : '';
         if (!items || items.length === 0) return;
-
         const groupedByMeal = items.reduce((acc, item) => {
             (acc[item.meal] = acc[item.meal] || []).push(item);
             return acc;
         }, {});
-
         MEALS.forEach(meal => {
             if (groupedByMeal[meal] && groupedByMeal[meal].length > 0) {
                 foodLogEntries.innerHTML += `<h4>${meal}</h4>`;
@@ -182,39 +178,32 @@ function createFoodModule() {
             acc.calories += Number(item.calories) || 0;
             return acc;
         }, { fat: 0, carbs: 0, protein: 0, calories: 0 });
-
         const { goals: currentGoals } = calculateCurrentGoals();
         const goalCals = currentGoals.calories || 0;
         const goalFat = currentGoals.fat || 0;
         const goalCarbs = currentGoals.carbs || 0;
         const goalProtein = currentGoals.protein || 0;
-
         calorieGoalProgress.innerHTML = goalCals > 0 ? `<span class="${getMacroColorClass(totals.calories, goalCals)}">${totals.calories.toFixed(0)}</span> / ${goalCals.toFixed(0)} kcal` : '';
-        
         foodLogTotals.innerHTML = `
-            <span class="macro-value">Fat: <span class="${getMacroColorClass(totals.fat, goalFat)}">${totals.fat.toFixed(1)}</span>/${goalFat.toFixed(0)}g</span> | 
-            <span class="macro-value">Carbs: <span class="${getMacroColorClass(totals.carbs, goalCarbs)}">${totals.carbs.toFixed(1)}</span>/${goalCarbs.toFixed(0)}g</span> | 
+            <span class="macro-value">Fat: <span class="${getMacroColorClass(totals.fat, goalFat)}">${totals.fat.toFixed(1)}</span>/${goalFat.toFixed(0)}g</span> |
+            <span class="macro-value">Carbs: <span class="${getMacroColorClass(totals.carbs, goalCarbs)}">${totals.carbs.toFixed(1)}</span>/${goalCarbs.toFixed(0)}g</span> |
             <span class="macro-value">Protein: <span class="${getMacroColorClass(totals.protein, goalProtein)}">${totals.protein.toFixed(1)}</span>/${goalProtein.toFixed(0)}g</span>`;
-        
         renderPieChart(totals);
     }
-    
+
     function renderPieChart(totals) {
         const canvas = document.getElementById('macro-pie-chart');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         if (macroChart) macroChart.destroy();
-
         const fatCals = totals.fat * 9;
         const carbCals = totals.carbs * 4;
         const protCals = totals.protein * 4;
         const totalCals = fatCals + carbCals + protCals;
-
         if (totalCals === 0) {
             ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
             return;
         }
-
         macroChart = new Chart(ctx, {
             type: 'pie',
             data: {
@@ -239,74 +228,46 @@ function createFoodModule() {
     function render() {
         if (!selectedCalendarDate) selectedCalendarDate = getTodayDateString();
         renderFoodCalendar();
-
         const logExists = getState().foodLogs[selectedCalendarDate];
         currentFoodLogDate = logExists ? selectedCalendarDate : null;
-
         if (currentFoodLogDate) {
             currentFoodLogSection.style.display = 'block';
             const log = getState().foodLogs[currentFoodLogDate];
             const isFinished = log.isFinished || false;
             const sortedDates = Object.keys(getState().foodLogs).sort((a, b) => new Date(b) - new Date(a));
             const currentIndex = sortedDates.indexOf(currentFoodLogDate);
-            
             foodLogTitle.textContent = formatDate(currentFoodLogDate);
             prevFoodLogBtn.disabled = currentIndex >= sortedDates.length - 1;
             nextFoodLogBtn.disabled = currentIndex <= 0;
             addFoodItemForm.style.display = isFinished ? 'none' : 'block';
             finishFoodLogBtn.style.display = isFinished ? 'none' : 'block';
             editFoodLogBtn.style.display = isFinished ? 'inline-block' : 'none';
-            
             renderFoodEntries(log.items, isFinished);
             calculateAndRenderTotals(log.items);
         } else {
             currentFoodLogSection.style.display = 'none';
         }
-        
         createFoodLogSection.style.display = 'block';
     }
-
-
-    // --- 4. API & FORM HANDLING ---
-    function handleUpcSuccess(response) {
-        const product = response.product ? response.product : response;
-        if (!product || product.status === 0 || !product.product_name) {
-            handleApiError(new Error('Product not found or API data is incomplete.'));
-            foodItemNameInput.value = '';
-            return;
-        }
-        const nutrients = product.nutriments;
-        const productName = product.product_name || 'Unknown Product';
-        const servingSizeString = product.serving_size || '100g';
-        const servingGrams = parseFloat(product.serving_quantity) || parseFloat(servingSizeString) || 100;
-        const macrosPer100g = {
-            p: nutrients.proteins_100g ?? 0,
-            c: nutrients.carbohydrates_100g ?? 0,
-            f: nutrients.fat_100g ?? 0
-        };
-        const foodData = {
-            baseName: productName,
-            servingGrams: servingGrams,
-            servingUnitName: servingSizeString,
-            macrosPer100g: macrosPer100g
-        };
-        populateAndShowMainForm(foodData);
-    }
-    
+	    // --- 4. API & FORM HANDLING ---
     function populateAndShowMainForm(foodData) {
+        // This function is now the callback for when an item is selected from the search results
         addFoodItemForm.dataset.baseName = foodData.baseName;
         addFoodItemForm.dataset.macrosPer100g = JSON.stringify(foodData.macrosPer100g);
         addFoodItemForm.dataset.servingGrams = foodData.servingGrams;
+        
         foodItemNameInput.value = foodData.baseName;
-        foodSearchResultsContainer.innerHTML = '';
+        
         addFoodItemForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
         foodItemUnitSelect.innerHTML = `<option value="serving">${foodData.servingUnitName || 'serving'}</option><option value="g">g</option>`;
         foodItemQuantityInput.value = 1;
         foodItemUnitSelect.value = 'serving';
+        
         foodMacroDetails.style.display = 'flex';
         handleMacroRecalculation();
     }
-    
+
     function handleMacroRecalculation() {
         const data = addFoodItemForm.dataset;
         if (!data.macrosPer100g) return;
@@ -320,13 +281,14 @@ function createFoodModule() {
         foodItemCarbsInput.value = ((macrosPer100g.c || 0) * multiplier).toFixed(1);
         foodItemProteinInput.value = ((macrosPer100g.p || 0) * multiplier).toFixed(1);
     }
-    
+
     const onScanSuccess = (decodedText) => {
         stopScanner();
-        foodSearchResultsContainer.innerHTML = '<p class="search-meta-info">Searching for UPC...</p>';
-        foodApi.searchByUpc(decodedText).then(handleUpcSuccess).catch(handleApiError);
+        // Trigger the search module with the scanned code
+        foodItemNameInput.value = decodedText;
+        foodItemNameInput.dispatchEvent(new Event('input', { bubbles: true }));
     };
-    
+
     const startScanner = () => {
         scannerModal.style.display = 'flex';
         html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } }, onScanSuccess, () => {}).catch(err => {
@@ -342,15 +304,15 @@ function createFoodModule() {
         scannerModal.style.display = 'none';
     };
 
+    // This is now only used by the search module if an API call fails
     const handleApiError = (error) => {
-        const loader = document.getElementById('usda-search-loader');
-        if (loader) loader.remove();
         foodSearchResultsContainer.innerHTML += `<p class="search-meta-info" style="color: var(--danger-color);">${error.message}</p>`;
         console.error(error.message, error);
     };
 
     // --- 5. EVENT BINDING ---
     function bindEvents() {
+        // The main input and search results click listeners are now handled by the `searchModule` in `init()`
         
         foodLogEntries.addEventListener('click', async (e) => {
             if (e.target.matches('.icon-btn')) e.preventDefault();
@@ -361,15 +323,12 @@ function createFoodModule() {
             if (!log) return;
             const entry = log.items.find(item => item.id === entryId);
             if (!entry) return;
+
             if (e.target.matches('.icon-btn.delete')) {
-                const confirmed = await showConfirmation('Are you sure you want to delete this food entry?');
-                if (confirmed) {
-                    const entryIndex = log.items.findIndex(item => item.id === entryId);
-                    if (entryIndex > -1) {
-                        log.items.splice(entryIndex, 1);
-                        saveDataToFirebase();
-                        render();
-                    }
+                if (await showConfirmation('Are you sure you want to delete this food entry?')) {
+                    log.items = log.items.filter(item => item.id !== entryId);
+                    saveDataToFirebase();
+                    render();
                 }
             } else if (e.target.matches('.icon-btn.edit')) {
                 entry.isEditing = true;
@@ -404,46 +363,24 @@ function createFoodModule() {
             }
         });
         
-        foodSearchResultsContainer.addEventListener('click', async (e) => {
-            const deleteBtn = e.target.closest('.icon-btn.delete');
-            if (deleteBtn) {
-                e.stopPropagation();
-                const foodNameToDelete = deleteBtn.dataset.foodNameDelete;
-                const confirmed = await showConfirmation(`Permanently delete "${foodNameToDelete}" from your saved foods?`);
-                if (confirmed) {
-                    getState().uniqueFoods = getState().uniqueFoods.filter(food => food.name !== foodNameToDelete);
-                    saveDataToFirebase();
-                    foodItemNameInput.dispatchEvent(new Event('input'));
-                }
-                return;
-            }
-            const resultItem = e.target.closest('.search-result-item');
-            if (!resultItem) return;
-            if (resultItem.classList.contains('upc-result')) {
-                foodApi.searchByUpc(resultItem.dataset.upc).then(handleUpcSuccess).catch(handleApiError);
-            } else if (resultItem.dataset.foodData) {
-                populateAndShowMainForm(JSON.parse(resultItem.dataset.foodData));
-            }
-        });
-        
         deleteFoodLogBtn.addEventListener('click', async () => {
-            if (currentFoodLogDate) {
-                const confirmed = await showConfirmation("Are you sure you want to delete this entire day's food log?");
-                if (confirmed) {
-                    delete getState().foodLogs[currentFoodLogDate];
-                    currentFoodLogDate = null;
-                    selectedCalendarDate = getTodayDateString();
-                    saveDataToFirebase();
-                    render();
-                }
+            if (currentFoodLogDate && await showConfirmation("Are you sure you want to delete this entire day's food log?")) {
+                delete getState().foodLogs[currentFoodLogDate];
+                currentFoodLogDate = null;
+                selectedCalendarDate = getTodayDateString();
+                saveDataToFirebase();
+                render();
             }
         });
-        
+
         addFoodItemForm.addEventListener('submit', (e) => {
             e.preventDefault();
             if (!currentFoodLogDate) return;
             const baseName = addFoodItemForm.dataset.baseName;
-            if (!baseName) { alert("Please select a food from search or create a new custom food."); return; }
+            if (!baseName) {
+                alert("Please select a food from search or create a new custom food.");
+                return;
+            }
             const fat = parseFloat(foodItemFatInput.value) || 0;
             const carbs = parseFloat(foodItemCarbsInput.value) || 0;
             const protein = parseFloat(foodItemProteinInput.value) || 0;
@@ -459,49 +396,12 @@ function createFoodModule() {
             saveDataToFirebase();
             render();
             addFoodItemForm.reset();
+            addFoodItemForm.removeAttribute('data-base-name');
+            addFoodItemForm.removeAttribute('data-macros-per-100g');
+            addFoodItemForm.removeAttribute('data-serving-grams');
             foodMacroDetails.style.display = 'none';
             setSmartMealDefault();
             foodItemNameInput.focus();
-        });
-
-        foodItemNameInput.addEventListener('input', () => {
-            clearTimeout(usdaSearchTimeout);
-            const query = foodItemNameInput.value.trim();
-            foodSearchResultsContainer.innerHTML = '';
-            foodMacroDetails.style.display = 'none';
-            if (query.length < 2) return;
-            if (/^\d{8,}$/.test(query)) {
-                foodSearchResultsContainer.innerHTML = `<div class="search-result-item upc-result" data-upc="${query}"><strong style="color:var(--primary-color);">Search for UPC: ${query}</strong></div>`;
-                return;
-            }
-            const lowerCaseQuery = query.toLowerCase();
-            const filteredLocal = getState().uniqueFoods.filter(food => food.name.toLowerCase().includes(lowerCaseQuery));
-            let localResultsHTML = '';
-            if (filteredLocal.length > 0) {
-                localResultsHTML += '<h6 class="search-results-header">My Foods</h6>';
-                filteredLocal.forEach(food => {
-                    const foodData = { baseName: food.name, macrosPer100g: food.macrosPer100g, servingGrams: food.servingGrams, servingUnitName: food.servingUnitName };
-                    localResultsHTML += `<div class="search-result-item" data-food-data='${JSON.stringify(foodData)}'><span>${food.name}</span><button class="icon-btn delete" title="Delete Saved Food" data-food-name-delete="${food.name}">&#128465;</button></div>`;
-                });
-            }
-            foodSearchResultsContainer.innerHTML = localResultsHTML;
-            foodSearchResultsContainer.innerHTML += `<div id="usda-search-loader" class="search-meta-info"><p>Searching USDA database...</p></div>`;
-            usdaSearchTimeout = setTimeout(() => {
-                foodApi.searchUsda(lowerCaseQuery).then(foods => {
-                    const loader = document.getElementById('usda-search-loader');
-                    if(loader) loader.remove();
-                    if (!foods || foods.length === 0) return;
-                    let usdaResultsHTML = '<h6 class="search-results-header">USDA Database</h6>';
-                    foods.forEach(food => {
-                        const p = food.foodNutrients.find(n => n.nutrientId === 1003)?.value || 0;
-                        const f = food.foodNutrients.find(n => n.nutrientId === 1004)?.value || 0;
-                        const c = food.foodNutrients.find(n => n.nutrientId === 1005)?.value || 0;
-                        const foodData = { baseName: food.description, servingGrams: 100, servingUnitName: '100g', macrosPer100g: { p, c, f } };
-                        usdaResultsHTML += `<div class="search-result-item" data-food-data='${JSON.stringify(foodData)}'><strong>${food.description}</strong> <small>(per 100g) - P: ${p}g, C: ${c}g, F: ${f}g</small></div>`;
-                    });
-                    foodSearchResultsContainer.innerHTML += usdaResultsHTML;
-                }).catch(handleApiError);
-            }, 300);
         });
 
         customFoodForm.addEventListener('submit', (e) => {
@@ -515,14 +415,20 @@ function createFoodModule() {
             if (!name || !servingSize || servingSize <= 0) { customFoodError.textContent = 'Please fill out a valid name and positive serving size.'; return; }
             if (isNaN(fat) || isNaN(carbs) || isNaN(protein)) { customFoodError.textContent = 'Please fill out all macro fields.'; return; }
             const multiplier = 100 / servingSize;
-            const newUniqueFood = { name, macrosPer100g: { p: protein * multiplier, c: carbs * multiplier, f: fat * multiplier }, servingGrams: servingSize, servingUnitName: `${servingSize}g serving`, isCustom: true };
-            if (getState().uniqueFoods.some(food => food.name.toLowerCase() === newUniqueFood.name.toLowerCase())) { customFoodError.textContent = 'A custom food with this name already exists.'; return; }
+            const newUniqueFood = {
+                id: `custom_${Date.now()}`, name,
+                macrosPer100g: { p: protein * multiplier, c: carbs * multiplier, f: fat * multiplier },
+                servingGrams: servingSize, servingUnitName: `${servingSize}g serving`, isCustom: true
+            };
+            if (getState().uniqueFoods.some(food => food.name.toLowerCase() === newUniqueFood.name.toLowerCase())) {
+                customFoodError.textContent = 'A custom food with this name already exists.'; return;
+            }
             getState().uniqueFoods.push(newUniqueFood);
             saveDataToFirebase();
             alert(`Successfully saved "${newUniqueFood.name}"!`);
             closeCustomFoodModal();
         });
-
+        
         showCustomFoodModalBtn.addEventListener('click', openCustomFoodModal);
         customFoodModalCloseBtn.addEventListener('click', closeCustomFoodModal);
         foodItemQuantityInput.addEventListener('input', handleMacroRecalculation);
@@ -558,12 +464,20 @@ function createFoodModule() {
         calculateCurrentGoals = api.calculateCurrentGoals;
         formatDate = api.formatDate;
         showConfirmation = api.showConfirmation;
+        
+        // Initialize the search module for the main food log's search bar
+        searchModule.init(api);
+        // Tell the search module what to listen to and what to do when an item is selected
+        searchModule.listen(foodItemNameInput, foodSearchResultsContainer, (selectedFood) => {
+            populateAndShowMainForm(selectedFood);
+        });
+        
         selectedCalendarDate = getTodayDateString();
         foodLogDateInput.value = selectedCalendarDate;
         html5QrCode = new Html5Qrcode("barcode-reader");
         bindEvents();
         setSmartMealDefault();
     }
-
+    
     return { init, render };
 }
