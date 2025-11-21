@@ -323,19 +323,21 @@ document.addEventListener('DOMContentLoaded', () => {
             remindersModule = createRemindersModule();
             sharingModule = createSharingModule();
             recipesModule = createRecipesModule();
+	    scannerModule = createScannerModule();
 
             const moduleApi = { 
                 db, getState, saveDataToFirebase, switchTab, getTodayDateString, 
-                foodApi: foodApiModule, 
+                foodApi: foodApiModule, scannerModule: scannerModule,
                 sanitizeNameForId, calculateCurrentGoals, formatDate, calculateE1RM, 
-                showConfirmation, VAPID_PUBLIC_KEY,
+                showConfirmation, VAPID_PUBLIC_KEY, 
             };
-            
+           
             moduleApi.workoutModule = workoutModule;
             moduleApi.foodModule = foodModule;
             moduleApi.recipesModule = recipesModule;
             moduleApi.sharingModule = sharingModule;
-
+	    
+	    scannerModule.init();
             searchModule.init(moduleApi);
             foodModule.init(moduleApi);
             recipesModule.init(moduleApi);
@@ -347,6 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
             programsModule.init(moduleApi);
             remindersModule.init(moduleApi);
             sharingModule.init(moduleApi);
+	    
             
             const hasAboutMeData = !!(state.about && state.about.age);
             const initialTab = hasAboutMeData ? 'tab-workout-log' : 'tab-about-me';
