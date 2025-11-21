@@ -78,42 +78,56 @@ function createProgressModule() {
     }
 
     function renderWeeklySetVolume() {
-        const setVolumeList = document.getElementById('set-volume-list');
-        if (!setVolumeList) return;
-        const { start, end } = getWeekDates(weekOffset);
-        const weeklyWorkouts = getState().workouts.filter(w => w.date >= start && w.date < end);
-        const muscleCounts = new Map();
-        const exerciseLibraryMap = new Map(getState().exercises.map(ex => [ex.name.toLowerCase(), ex]));
-        weeklyWorkouts.forEach(workout => {
-            const exercisesInWorkout = migrateExerciseData(workout.exercises);
-            exercisesInWorkout.forEach(loggedExercise => {
-                const masterExercise = exerciseLibraryMap.get(loggedExercise.name.toLowerCase());
-                if (!masterExercise || !loggedExercise.sets || loggedExercise.sets.length === 0) return;
-                const numSets = loggedExercise.sets.length;
-                if (masterExercise.primaryMuscle) {
-                    const currentCount = muscleCounts.get(masterExercise.primaryMuscle) || 0;
-                    muscleCounts.set(masterExercise.primaryMuscle, currentCount + numSets);
-                }
-                if (Array.isArray(masterExercise.secondaryMuscles)) {
-                    masterExercise.secondaryMuscles.forEach(muscle => {
-                        const currentCount = muscleCounts.get(muscle) || 0;
-                        muscleCounts.set(muscle, currentCount + (numSets * 0.5));
-                    });
+    const setVolumeList = document.getElementById('set-volume-list');
+    if (!setVolumeList) return;
+
+    const { start, end } = getWeekDates(weekOffset);
+    const weeklyWorkouts = getState().workouts.filter(w => w.date >= start && w.date < end);
+    
+    const muscleCounts = new Map();
+    // Create a lookup map from the main exercise library for efficiency
+    const exerciseLibraryMap = new Map(getState().exercises.map(ex => [ex.name.toLowerCase(), ex]));
+
+    weeklyWorkouts.forEach(workout => {
+        if (!workout.exercises) return;
+
+        // Loop through the top-level exercise cards (e.g., superset groups)
+        workout.exercises.forEach(exerciseGroup => {
+            if (!exerciseGroup.subExercises) return;
+
+            // **THE FIX IS HERE**: Loop through the sub-exercises within the group
+            exerciseGroup.subExercises.forEach(subEx => {
+                // Find the full exercise details in our library lookup map
+                const masterExercise = exerciseLibraryMap.get(subEx.name.toLowerCase());
+                
+                // If we found the exercise in the library and it has sets...
+                if (masterExercise && masterExercise.primaryMuscle && subEx.sets) {
+                    
+                    // Only count non-warmup sets towards volume
+                    const numWorkingSets = subEx.sets.filter(s => !s.isWarmup).length;
+
+                    if (numWorkingSets > 0) {
+                        const currentCount = muscleCounts.get(masterExercise.primaryMuscle) || 0;
+                        muscleCounts.set(masterExercise.primaryMuscle, currentCount + numWorkingSets);
+                    }
                 }
             });
         });
-        if (muscleCounts.size === 0) {
-            setVolumeList.innerHTML = `<p>No sets logged for this time period.</p>`;
-            return;
-        }
-        const sortedMuscles = [...muscleCounts.entries()].sort((a, b) => b[1] - a[1]);
-        setVolumeList.innerHTML = sortedMuscles.map(([muscle, count]) => `
-            <div class="set-volume-item">
-                <span class="muscle-name">${muscle}</span>
-                <span class="set-count">${count.toFixed(1)} <small>sets</small></span>
-            </div>
-        `).join('');
+    });
+
+    if (muscleCounts.size === 0) {
+        setVolumeList.innerHTML = `<p>No working sets logged for this time period.</p>`;
+        return;
     }
+    
+    const sortedMuscles = [...muscleCounts.entries()].sort((a, b) => b[1] - a[1]);
+    setVolumeList.innerHTML = sortedMuscles.map(([muscle, count]) => `
+        <div class="set-volume-item">
+            <span class="muscle-name">${muscle}</span>
+            <span class="set-count">${count} <small>sets</small></span>
+        </div>
+    `).join('');
+}
 
     /**
      * MODIFIED: This function now displays the components of the average calculation.

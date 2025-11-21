@@ -74,58 +74,80 @@ function createSearchModule() {
         });
 
         resultsContainerEl.addEventListener('click', async (e) => {
-            const deleteBtn = e.target.closest('.icon-btn.delete');
-            if (deleteBtn) {
-                e.stopPropagation();
-                const foodNameToDelete = deleteBtn.dataset.foodNameDelete;
-                if (await showConfirmation(`Permanently delete "${foodNameToDelete}" from your saved foods?`)) {
-                    getState().uniqueFoods = getState().uniqueFoods.filter(food => food.name !== foodNameToDelete);
-                    saveDataToFirebase();
-                    inputEl.dispatchEvent(new Event('input')); // Trigger a re-search to update the list
-                }
-                return;
-            }
+    const deleteBtn = e.target.closest('.icon-btn.delete');
+    if (deleteBtn) {
+        e.stopPropagation();
+        const foodNameToDelete = deleteBtn.dataset.foodNameDelete;
+        if (await showConfirmation(`Permanently delete "${foodNameToDelete}" from your saved foods?`)) {
+            getState().uniqueFoods = getState().uniqueFoods.filter(food => food.name !== foodNameToDelete);
+            saveDataToFirebase();
+            inputEl.dispatchEvent(new Event('input'));
+        }
+        return;
+    }
 
-            const resultItem = e.target.closest('.search-result-item');
-            if (!resultItem) return;
+    const resultItem = e.target.closest('.search-result-item');
+    if (!resultItem) return;
+    
+    let foodDataForProcessing;
 
-            let foodDataForProcessing;
-            if (resultItem.classList.contains('upc-result')) {
-                try {
-                    const response = await foodApi.searchByUpc(resultItem.dataset.upc);
-                    const product = response.product || response;
-                    if (!product || product.status === 0 || !product.product_name) throw new Error('Product not found via UPC.');
-                    const nutrients = product.nutriments;
-                    foodDataForProcessing = { id: `upc_${resultItem.dataset.upc}`, name: product.product_name, nutrition: { calories: nutrients.energy_kcal_100g || 0, protein: nutrients.proteins_100g || 0, carbs: nutrients.carbohydrates_100g || 0, fat: nutrients.fat_100g || 0 } };
-                } catch (error) {
-                    resultsContainerEl.innerHTML += `<p class="search-meta-info" style="color: var(--danger-color);">${error.message}</p>`;
-                    return;
-                }
-            } else if (resultItem.dataset.foodData) {
-                const parsedData = JSON.parse(resultItem.dataset.foodData);
-                foodDataForProcessing = {
-                    id: parsedData.id || `custom_${Date.now()}`,
-                    name: parsedData.baseName,
-                    nutrition: {
-                        calories: parsedData.macrosPer100g ? ((parsedData.macrosPer100g.p * 4) + (parsedData.macrosPer100g.c * 4) + (parsedData.macrosPer100g.f * 9)) : (parsedData.totalNutrition?.calories / parsedData.totalWeight * 100 || 0),
-                        protein: parsedData.macrosPer100g?.p || (parsedData.totalNutrition?.protein / parsedData.totalWeight * 100 || 0),
-                        carbs: parsedData.macrosPer100g?.c || (parsedData.totalNutrition?.carbs / parsedData.totalWeight * 100 || 0),
-                        fat: parsedData.macrosPer100g?.f || (parsedData.totalNutrition?.fat / parsedData.totalWeight * 100 || 0)
-                    },
-                    macrosPer100g: parsedData.macrosPer100g,
-                    servingGrams: parsedData.servingGrams,
-                    servingUnitName: parsedData.servingUnitName,
-                };
-            }
+    if (resultItem.classList.contains('upc-result')) {
+        // This part for UPC is fine
+        try {
+            const product = await foodApi.searchByUpc(resultItem.dataset.upc);
+            if (!product || product.status === 0 || !product.product_name) throw new Error('Product not found via UPC.');
             
-            // Execute the callback function with the processed food data
-            onItemSelected(foodDataForProcessing); 
-            
-            // Clean up the UI
-            inputEl.value = '';
-            resultsContainerEl.innerHTML = '';
-            resultsContainerEl.style.display = 'none';
-        });
+            const nutrients = product.nutriments;
+            foodDataForProcessing = {
+                id: `upc_${resultItem.dataset.upc}`,
+                baseName: product.product_name,
+                macrosPer100g: {
+                    p: nutrients.proteins_100g || 0,
+                    c: nutrients.carbohydrates_100g || 0,
+                    f: nutrients.fat_100g || 0
+                },
+                servingGrams: 100,
+                servingUnitName: '100g'
+            };
+        } catch (error) {
+            resultsContainerEl.innerHTML = `<p class="search-meta-info" style="color: var(--danger-color);">${error.message}</p>`;
+            return;
+        }
+    } else if (resultItem.dataset.foodData) {
+        const parsedData = JSON.parse(resultItem.dataset.foodData);
+
+        // --- THIS IS THE KEY FIX ---
+        if (parsedData.type === 'recipe') {
+            // If the item is a RECIPE, calculate its macros per 100g
+            const totalWeight = parsedData.totalWeight;
+            const totalNutrition = parsedData.totalNutrition;
+            const scale = 100 / totalWeight;
+
+            foodDataForProcessing = {
+                id: parsedData.id,
+                baseName: parsedData.name,
+                macrosPer100g: {
+                    p: (totalNutrition.protein || 0) * scale,
+                    c: (totalNutrition.carbs || 0) * scale,
+                    f: (totalNutrition.fat || 0) * scale
+                },
+                // A "serving" of a recipe is the whole recipe
+                servingGrams: totalWeight, 
+                servingUnitName: `1 recipe (${totalWeight.toFixed(0)}g)`
+            };
+        } else {
+            // If it's a normal food item, process as before
+            foodDataForProcessing = parsedData;
+        }
+    }
+
+    if (foodDataForProcessing) {
+        onItemSelected(foodDataForProcessing);
+    }
+    
+    resultsContainerEl.innerHTML = '';
+    resultsContainerEl.style.display = 'none';
+});
 
         // Hide search results when clicking away from the input or the results list
         document.addEventListener('click', (e) => {

@@ -6,7 +6,6 @@ function createFoodModule() {
         calendarViewDate = new Date(),
         selectedCalendarDate = null,
         macroChart,
-        html5QrCode,
         lastSelectedMeal = null;
 	const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
     // Create a dedicated search module instance for the main food log
@@ -36,9 +35,7 @@ function createFoodModule() {
           foodMacroDetails = document.getElementById('food-macro-details'),
           foodItemQuantityInput = document.getElementById('food-item-quantity'),
           foodItemUnitSelect = document.getElementById('food-item-unit'),
-          scannerModal = document.getElementById('scanner-modal'),
           scanBarcodeBtn = document.getElementById('scan-barcode-btn'),
-          scannerCloseBtn = document.getElementById('scanner-close-btn'),
           foodCalendarMonthYear = document.getElementById('food-calendar-month-year'),
           foodCalendarDaysGrid = document.getElementById('food-calendar-days-grid'),
           foodCalendarPrevWeekBtn = document.getElementById('food-calendar-prev-week'),
@@ -251,22 +248,28 @@ function createFoodModule() {
     }
 	    // --- 4. API & FORM HANDLING ---
     function populateAndShowMainForm(foodData) {
-        // This function is now the callback for when an item is selected from the search results
-        addFoodItemForm.dataset.baseName = foodData.baseName;
-        addFoodItemForm.dataset.macrosPer100g = JSON.stringify(foodData.macrosPer100g);
-        addFoodItemForm.dataset.servingGrams = foodData.servingGrams;
-        
-        foodItemNameInput.value = foodData.baseName;
-        
-        addFoodItemForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-
-        foodItemUnitSelect.innerHTML = `<option value="serving">${foodData.servingUnitName || 'serving'}</option><option value="g">g</option>`;
-        foodItemQuantityInput.value = 1;
-        foodItemUnitSelect.value = 'serving';
-        
-        foodMacroDetails.style.display = 'flex';
-        handleMacroRecalculation();
+    if (!foodData || !foodData.baseName) {
+        console.error("Invalid food data received by populateAndShowMainForm", foodData);
+        alert("Could not process the selected food. Please try again.");
+        return;
     }
+
+    // Set data attributes on the form for later use
+    addFoodItemForm.dataset.baseName = foodData.baseName;
+    addFoodItemForm.dataset.macrosPer100g = JSON.stringify(foodData.macrosPer100g);
+    addFoodItemForm.dataset.servingGrams = foodData.servingGrams;
+    
+    // **THE KEY FIX**: Explicitly set the input field's value to the food's name
+    foodItemNameInput.value = foodData.baseName; 
+
+    // Show and populate the rest of the form
+    addFoodItemForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    foodItemUnitSelect.innerHTML = `<option value="serving">${foodData.servingUnitName || 'serving'}</option><option value="g">g</option>`;
+    foodItemQuantityInput.value = 1;
+    foodItemUnitSelect.value = 'serving';
+    foodMacroDetails.style.display = 'flex';
+    handleMacroRecalculation();
+}
 
     function handleMacroRecalculation() {
         const data = addFoodItemForm.dataset;
@@ -282,28 +285,6 @@ function createFoodModule() {
         foodItemProteinInput.value = ((macrosPer100g.p || 0) * multiplier).toFixed(1);
     }
 
-    const onScanSuccess = (decodedText) => {
-        stopScanner();
-        // Trigger the search module with the scanned code
-        foodItemNameInput.value = decodedText;
-        foodItemNameInput.dispatchEvent(new Event('input', { bubbles: true }));
-    };
-
-    const startScanner = () => {
-        scannerModal.style.display = 'flex';
-        html5QrCode.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 150 } }, onScanSuccess, () => {}).catch(err => {
-            alert("Error: Could not start camera. Please grant permissions.");
-            stopScanner();
-        });
-    };
-
-    const stopScanner = () => {
-        if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().catch(err => console.error("Failed to stop scanner.", err));
-        }
-        scannerModal.style.display = 'none';
-    };
-
     // This is now only used by the search module if an API call fails
     const handleApiError = (error) => {
         foodSearchResultsContainer.innerHTML += `<p class="search-meta-info" style="color: var(--danger-color);">${error.message}</p>`;
@@ -312,147 +293,197 @@ function createFoodModule() {
 
     // --- 5. EVENT BINDING ---
     function bindEvents() {
-        // The main input and search results click listeners are now handled by the `searchModule` in `init()`
-        
-        foodLogEntries.addEventListener('click', async (e) => {
-            if (e.target.matches('.icon-btn')) e.preventDefault();
-            const entryDetails = e.target.closest('.food-item-details');
-            if (!entryDetails || !currentFoodLogDate) return;
-            const entryId = Number(entryDetails.dataset.entryId);
-            const log = getState().foodLogs[currentFoodLogDate];
-            if (!log) return;
-            const entry = log.items.find(item => item.id === entryId);
-            if (!entry) return;
+    // This handles clicks on entries (edit, delete, save quantity)
+    foodLogEntries.addEventListener('click', async (e) => {
+        if (e.target.matches('.icon-btn')) e.preventDefault();
+        const entryDetails = e.target.closest('.food-item-details');
+        if (!entryDetails || !currentFoodLogDate) return;
+        const entryId = Number(entryDetails.dataset.entryId);
+        const log = getState().foodLogs[currentFoodLogDate];
+        if (!log || !log.items) return;
+        const entry = log.items.find(item => item.id === entryId);
+        if (!entry) return;
 
-            if (e.target.matches('.icon-btn.delete')) {
-                if (await showConfirmation('Are you sure you want to delete this food entry?')) {
-                    log.items = log.items.filter(item => item.id !== entryId);
-                    saveDataToFirebase();
-                    render();
-                }
-            } else if (e.target.matches('.icon-btn.edit')) {
-                entry.isEditing = true;
+        if (e.target.matches('.icon-btn.delete')) {
+            if (await showConfirmation('Are you sure you want to delete this food entry?')) {
+                log.items = log.items.filter(item => item.id !== entryId);
+                saveDataToFirebase();
                 render();
-                setTimeout(() => {
-                    const newRow = foodLogEntries.querySelector(`[data-entry-id="${entryId}"]`);
-                    if (newRow) {
-                        newRow.querySelector('.inline-edit-qty').focus();
-                        newRow.querySelector('.inline-edit-qty').select();
+            }
+        } else if (e.target.matches('.icon-btn.edit')) {
+            entry.isEditing = true;
+            render();
+            setTimeout(() => {
+                const newRow = foodLogEntries.querySelector(`[data-entry-id="${entryId}"]`);
+                if (newRow) {
+                    const qtyInput = newRow.querySelector('.inline-edit-qty');
+                    if (qtyInput) {
+                        qtyInput.focus();
+                        qtyInput.select();
                     }
-                }, 0);
-            } else if (e.target.matches('.icon-btn.cancel')) {
-                delete entry.isEditing;
-                render();
-            } else if (e.target.matches('.icon-btn.save')) {
-                const newQty = parseFloat(entryDetails.querySelector('.inline-edit-qty').value);
-                const newUnit = entryDetails.querySelector('.inline-edit-unit').value;
-                if (isNaN(newQty) || newQty <= 0) { alert("Please enter a valid, positive quantity."); return; }
-                const { macrosPer100g, servingGrams } = entry;
-                let totalGrams = (newUnit === 'g') ? newQty : (newQty * servingGrams);
-                const multiplier = totalGrams / 100;
-                entry.fat = (macrosPer100g.f || 0) * multiplier;
-                entry.carbs = (macrosPer100g.c || 0) * multiplier;
-                entry.protein = (macrosPer100g.p || 0) * multiplier;
-                entry.calories = (entry.fat * 9) + (entry.carbs * 4) + (entry.protein * 4);
-                entry.originalQty = newQty;
-                entry.unit = newUnit;
-                entry.name = `${entry.baseName} (${newQty} ${newUnit})`;
-                delete entry.isEditing;
-                saveDataToFirebase();
-                render();
-            }
-        });
-        
-        deleteFoodLogBtn.addEventListener('click', async () => {
-            if (currentFoodLogDate && await showConfirmation("Are you sure you want to delete this entire day's food log?")) {
-                delete getState().foodLogs[currentFoodLogDate];
-                currentFoodLogDate = null;
-                selectedCalendarDate = getTodayDateString();
-                saveDataToFirebase();
-                render();
-            }
-        });
-
-        addFoodItemForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (!currentFoodLogDate) return;
-            const baseName = addFoodItemForm.dataset.baseName;
-            if (!baseName) {
-                alert("Please select a food from search or create a new custom food.");
+                }
+            }, 0);
+        } else if (e.target.matches('.icon-btn.cancel')) {
+            delete entry.isEditing;
+            render();
+        } else if (e.target.matches('.icon-btn.save')) {
+            const newQty = parseFloat(entryDetails.querySelector('.inline-edit-qty').value);
+            const newUnit = entryDetails.querySelector('.inline-edit-unit').value;
+            if (isNaN(newQty) || newQty <= 0) {
+                alert("Please enter a valid, positive quantity.");
                 return;
             }
-            const fat = parseFloat(foodItemFatInput.value) || 0;
-            const carbs = parseFloat(foodItemCarbsInput.value) || 0;
-            const protein = parseFloat(foodItemProteinInput.value) || 0;
-            const unit = foodItemUnitSelect.value;
-            const originalQty = parseFloat(foodItemQuantityInput.value) || 1;
-            const newItem = {
-                id: Date.now(), name: `${baseName} (${originalQty} ${unit})`, meal: foodItemMealSelect.value,
-                fat, carbs, protein, calories: (fat * 9) + (carbs * 4) + (protein * 4), baseName,
-                macrosPer100g: JSON.parse(addFoodItemForm.dataset.macrosPer100g),
-                servingGrams: parseFloat(addFoodItemForm.dataset.servingGrams), originalQty, unit,
-            };
-            (getState().foodLogs[currentFoodLogDate].items = getState().foodLogs[currentFoodLogDate].items || []).push(newItem);
+            const { macrosPer100g, servingGrams, baseName } = entry;
+            let totalGrams = (newUnit === 'g') ? newQty : (newQty * servingGrams);
+            const multiplier = totalGrams / 100;
+            entry.fat = (macrosPer100g.f || 0) * multiplier;
+            entry.carbs = (macrosPer100g.c || 0) * multiplier;
+            entry.protein = (macrosPer100g.p || 0) * multiplier;
+            entry.calories = (entry.fat * 9) + (entry.carbs * 4) + (entry.protein * 4);
+            entry.originalQty = newQty;
+            entry.unit = newUnit;
+            entry.name = `${baseName} (${newQty} ${newUnit})`;
+            delete entry.isEditing;
             saveDataToFirebase();
             render();
-            addFoodItemForm.reset();
-            addFoodItemForm.removeAttribute('data-base-name');
-            addFoodItemForm.removeAttribute('data-macros-per-100g');
-            addFoodItemForm.removeAttribute('data-serving-grams');
-            foodMacroDetails.style.display = 'none';
-            setSmartMealDefault();
-            foodItemNameInput.focus();
-        });
+        }
+    });
 
-        customFoodForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            customFoodError.textContent = '';
-            const name = customFoodName.value.trim();
-            const servingSize = parseFloat(customServingSize.value);
-            const fat = parseFloat(customFat.value);
-            const carbs = parseFloat(customCarbs.value);
-            const protein = parseFloat(customProtein.value);
-            if (!name || !servingSize || servingSize <= 0) { customFoodError.textContent = 'Please fill out a valid name and positive serving size.'; return; }
-            if (isNaN(fat) || isNaN(carbs) || isNaN(protein)) { customFoodError.textContent = 'Please fill out all macro fields.'; return; }
-            const multiplier = 100 / servingSize;
-            const newUniqueFood = {
-                id: `custom_${Date.now()}`, name,
-                macrosPer100g: { p: protein * multiplier, c: carbs * multiplier, f: fat * multiplier },
-                servingGrams: servingSize, servingUnitName: `${servingSize}g serving`, isCustom: true
-            };
-            if (getState().uniqueFoods.some(food => food.name.toLowerCase() === newUniqueFood.name.toLowerCase())) {
-                customFoodError.textContent = 'A custom food with this name already exists.'; return;
-            }
-            getState().uniqueFoods.push(newUniqueFood);
-            saveDataToFirebase();
-            alert(`Successfully saved "${newUniqueFood.name}"!`);
-            closeCustomFoodModal();
-        });
+    // This handles the main form submission for adding a new food item
+    addFoodItemForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!currentFoodLogDate) return;
+    
+    const baseName = addFoodItemForm.dataset.baseName;
+    if (!baseName) {
+        alert("Please select a food from search or create a new custom food.");
+        return;
+    }
+
+    // --- THIS IS THE NEW LOGIC ---
+    const shouldSaveToMyFoods = document.getElementById('save-to-my-foods-toggle').checked;
+
+    if (shouldSaveToMyFoods) {
+        // Check if a food with this name already exists in "My Foods"
+        const foodExists = getState().uniqueFoods.some(food => food.name.toLowerCase() === baseName.toLowerCase());
         
-        showCustomFoodModalBtn.addEventListener('click', openCustomFoodModal);
-        customFoodModalCloseBtn.addEventListener('click', closeCustomFoodModal);
-        foodItemQuantityInput.addEventListener('input', handleMacroRecalculation);
-        foodItemUnitSelect.addEventListener('change', handleMacroRecalculation);
-        scanBarcodeBtn.addEventListener('click', startScanner);
-        scannerCloseBtn.addEventListener('click', stopScanner);
-        foodItemMealSelect.addEventListener('change', () => { lastSelectedMeal = foodItemMealSelect.value; });
-        foodCalendarPrevWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() - 7); render(); });
-        foodCalendarNextWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() + 7); render(); });
-        foodCalendarDaysGrid.addEventListener('click', (e) => { const dayEl = e.target.closest('.calendar-day'); if (dayEl) { selectedCalendarDate = dayEl.dataset.date; render(); } });
-        createFoodLogForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const date = selectedCalendarDate;
-            if (!getState().foodLogs[date]) {
-                getState().foodLogs[date] = { items: [], isFinished: false };
-            }
+        if (!foodExists) {
+            // If it doesn't exist, create a new object for our permanent "My Foods" list
+            const newUniqueFood = {
+                id: `custom_${Date.now()}`,
+                name: baseName,
+                macrosPer100g: JSON.parse(addFoodItemForm.dataset.macrosPer100g || '{}'),
+                servingGrams: parseFloat(addFoodItemForm.dataset.servingGrams),
+                servingUnitName: addFoodItemForm.querySelector('#food-item-unit option[value="serving"]').textContent,
+                isCustom: true // Mark it as a saved item
+            };
+            getState().uniqueFoods.push(newUniqueFood);
+            // No need to call saveDataToFirebase() here, it will be called after adding the item to the daily log.
+        }
+    }
+    // --- END OF NEW LOGIC ---
+
+    const fat = parseFloat(foodItemFatInput.value) || 0;
+    const carbs = parseFloat(foodItemCarbsInput.value) || 0;
+    const protein = parseFloat(foodItemProteinInput.value) || 0;
+    const unit = foodItemUnitSelect.value;
+    const originalQty = parseFloat(foodItemQuantityInput.value) || 1;
+
+    // This part, which adds the item to the daily log, is unchanged
+    const newItem = {
+        id: Date.now(),
+        name: `${baseName} (${originalQty} ${unit})`,
+        meal: foodItemMealSelect.value,
+        fat, carbs, protein,
+        calories: (fat * 9) + (carbs * 4) + (protein * 4),
+        baseName,
+        macrosPer100g: JSON.parse(addFoodItemForm.dataset.macrosPer100g || '{}'),
+        servingGrams: parseFloat(addFoodItemForm.dataset.servingGrams),
+        originalQty,
+        unit,
+    };
+    (getState().foodLogs[currentFoodLogDate].items = getState().foodLogs[currentFoodLogDate].items || []).push(newItem);
+    
+    // This single save operation saves both the daily log and the (potentially updated) "My Foods" list
+    saveDataToFirebase();
+    render();
+
+    // Reset the form and the toggle for the next entry
+    addFoodItemForm.reset();
+    document.getElementById('save-to-my-foods-toggle').checked = false; 
+    addFoodItemForm.removeAttribute('data-base-name');
+    addFoodItemForm.removeAttribute('data-macros-per-100g');
+    addFoodItemForm.removeAttribute('data-serving-grams');
+    foodMacroDetails.style.display = 'none';
+    setSmartMealDefault();
+    foodItemNameInput.focus();
+});
+
+    // This handles the custom food form submission
+    customFoodForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        customFoodError.textContent = '';
+        const name = customFoodName.value.trim();
+        const servingSize = parseFloat(customServingSize.value);
+        const fat = parseFloat(customFat.value);
+        const carbs = parseFloat(customCarbs.value);
+        const protein = parseFloat(customProtein.value);
+        if (!name || !servingSize || servingSize <= 0) { customFoodError.textContent = 'Please fill out a valid name and positive serving size.'; return; }
+        if (isNaN(fat) || isNaN(carbs) || isNaN(protein)) { customFoodError.textContent = 'Please fill out all macro fields.'; return; }
+        const multiplier = 100 / servingSize;
+        const newUniqueFood = {
+            id: `custom_${Date.now()}`, name,
+            macrosPer100g: { p: protein * multiplier, c: carbs * multiplier, f: fat * multiplier },
+            servingGrams: servingSize, servingUnitName: `${servingSize}g serving`, isCustom: true
+        };
+        if ((getState().uniqueFoods || []).some(food => food.name.toLowerCase() === newUniqueFood.name.toLowerCase())) {
+            customFoodError.textContent = 'A custom food with this name already exists.'; return;
+        }
+        (getState().uniqueFoods = getState().uniqueFoods || []).push(newUniqueFood);
+        saveDataToFirebase();
+        alert(`Successfully saved "${newUniqueFood.name}"!`);
+        closeCustomFoodModal();
+    });
+
+    // --- THIS IS THE REFACTORED PART ---
+    // The old `startScanner` and `stopScanner` calls are removed.
+    // We now have one simple listener that calls the global scanner module.
+    scanBarcodeBtn.addEventListener('click', () => {
+        scannerModule.start(foodItemNameInput);
+    });
+
+    // --- The rest of the event listeners ---
+    deleteFoodLogBtn.addEventListener('click', async () => {
+        if (currentFoodLogDate && await showConfirmation("Are you sure you want to delete this entire day's food log?")) {
+            delete getState().foodLogs[currentFoodLogDate];
+            currentFoodLogDate = null;
+            selectedCalendarDate = getTodayDateString();
             saveDataToFirebase();
             render();
-        });
-        prevFoodLogBtn.addEventListener('click', () => { const s = Object.keys(getState().foodLogs).sort((a,b)=>new Date(b)-new Date(a)); const i = s.indexOf(currentFoodLogDate); if (i < s.length - 1) { selectedCalendarDate = s[i+1]; render(); } });
-        nextFoodLogBtn.addEventListener('click', () => { const s = Object.keys(getState().foodLogs).sort((a,b)=>new Date(b)-new Date(a)); const i = s.indexOf(currentFoodLogDate); if (i > 0) { selectedCalendarDate = s[i-1]; render(); } });
-        finishFoodLogBtn.addEventListener('click', () => { const l = getState().foodLogs[currentFoodLogDate]; if (l) { l.isFinished = true; saveDataToFirebase(); render(); } });
-        editFoodLogBtn.addEventListener('click', () => { const l = getState().foodLogs[currentFoodLogDate]; if (l) { l.isFinished = false; saveDataToFirebase(); render(); } });
-    }
+        }
+    });
+    showCustomFoodModalBtn.addEventListener('click', openCustomFoodModal);
+    customFoodModalCloseBtn.addEventListener('click', closeCustomFoodModal);
+    foodItemQuantityInput.addEventListener('input', handleMacroRecalculation);
+    foodItemUnitSelect.addEventListener('change', handleMacroRecalculation);
+    foodItemMealSelect.addEventListener('change', () => { lastSelectedMeal = foodItemMealSelect.value; });
+    foodCalendarPrevWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() - 7); render(); });
+    foodCalendarNextWeekBtn.addEventListener('click', () => { calendarViewDate.setDate(calendarViewDate.getDate() + 7); render(); });
+    foodCalendarDaysGrid.addEventListener('click', (e) => { const dayEl = e.target.closest('.calendar-day'); if (dayEl) { selectedCalendarDate = dayEl.dataset.date; render(); } });
+    createFoodLogForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const date = selectedCalendarDate;
+        if (!getState().foodLogs[date]) {
+            getState().foodLogs[date] = { items: [], totals: {}, isFinished: false };
+        }
+        saveDataToFirebase();
+        render();
+    });
+    prevFoodLogBtn.addEventListener('click', () => { const s = Object.keys(getState().foodLogs).sort((a,b)=>new Date(b)-new Date(a)); const i = s.indexOf(currentFoodLogDate); if (i !== -1 && i < s.length - 1) { selectedCalendarDate = s[i+1]; render(); } });
+    nextFoodLogBtn.addEventListener('click', () => { const s = Object.keys(getState().foodLogs).sort((a,b)=>new Date(b)-new Date(a)); const i = s.indexOf(currentFoodLogDate); if (i > 0) { selectedCalendarDate = s[i-1]; render(); } });
+    finishFoodLogBtn.addEventListener('click', () => { const l = getState().foodLogs[currentFoodLogDate]; if (l) { l.isFinished = true; saveDataToFirebase(); render(); } });
+    editFoodLogBtn.addEventListener('click', () => { const l = getState().foodLogs[currentFoodLogDate]; if (l) { l.isFinished = false; saveDataToFirebase(); render(); } });
+}
 
     // --- 6. INITIALIZATION ---
     function init(api) {
